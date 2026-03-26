@@ -1,0 +1,47 @@
+﻿<quiz>
+  <timer_per_question>15</timer_per_question>
+  <points_per_correct>10</points_per_correct>
+  <questions>
+    <question>
+      <text>Which planet is known as the Red Planet?</text>
+      <option>Earth</option>
+      <option>Mars</option>
+      <option>Venus</option>
+      <option>Jupiter</option>
+      <answer>2</answer>
+    </question>
+    <question>
+      <text>What does CSS stand for?</text>
+      <option>Central Style Sheets</option>
+      <option>Creative Style System</option>
+      <option>Cascading Style Sheets</option>
+      <option>Computer Style Sheet</option>
+      <answer>3</answer>
+    </question>
+    <question>
+      <text>Which language runs in a web browser?</text>
+      <option>Python</option>
+      <option>JavaScript</option>
+      <option>C++</option>
+      <option>Java</option>
+      <answer>2</answer>
+    </question>
+    <question>
+      <text>How many sides does a hexagon have?</text>
+      <option>5</option>
+      <option>6</option>
+      <option>7</option>
+      <option>8</option>
+      <answer>2</answer>
+    </question>
+    <question>
+      <text>Which company created Flask?</text>
+      <option>Pallets</option>
+      <option>Meta</option>
+      <option>Google</option>
+      <option>Microsoft</option>
+      <answer>1</answer>
+    </question>
+  </questions>
+</quiz>
+

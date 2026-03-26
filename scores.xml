@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scores>
+  <game name="snake">
+    <entry>
+      <player>Player1</player>
+      <score>120</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  </game>
+  <game name="memory">
+    <entry>
+      <player>Player1</player>
+      <score>95</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  </game>
+  <game name="quiz">
+    <entry>
+      <player>Player1</player>
+      <score>70</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  <entry><player>pratik</player><score>108</score><timestamp>2026-03-26T14:09:07+00:00</timestamp><meta><correct>5</correct><total>5</total></meta></entry></game>
+  <game name="tictactoe">
+    <entry>
+      <player>Player1</player>
+      <score>50</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  </game>
+</scores>

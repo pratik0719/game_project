@@ -1,0 +1,11 @@
+﻿<platform>
+  <name>Neon Arcade Nexus</name>
+  <theme>dark-neon</theme>
+  <games>
+    <game name="snake" title="Snake Rush" accent="#39ff14" icon="??" />
+    <game name="memory" title="Memory Pulse" accent="#00e5ff" icon="??" />
+    <game name="quiz" title="Quiz Reactor" accent="#ffb703" icon="?" />
+    <game name="tictactoe" title="Tic Tac Toe Grid" accent="#ff4d9d" icon="?" />
+  </games>
+</platform>
+

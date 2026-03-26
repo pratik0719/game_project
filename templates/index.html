@@ -1,0 +1,46 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ platform_name }} | Home</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <script defer src="{{ url_for('static', filename='js/main.js') }}"></script>
+</head>
+<body class="page-home" data-page="home">
+  <header class="site-header">
+    <div class="brand-wrap">
+      <span class="brand-icon">?</span>
+      <h1>{{ platform_name }}</h1>
+    </div>
+    <nav class="top-nav">
+      <a class="btn btn-outline" href="{{ url_for('leaderboard_page') }}">Leaderboard</a>
+    </nav>
+  </header>
+
+  <main class="home-layout">
+    <section class="hero-panel card-surface">
+      <p class="eyebrow">MULTI-GAME PLATFORM</p>
+      <h2>Pick a challenge and jump in.</h2>
+      <p>Play four arcade-style mini games, each powered by XML config and Python APIs.</p>
+    </section>
+
+    <section class="games-grid" aria-label="Available games">
+      {% for game in games %}
+      <article class="game-card card-surface" style="--accent: {{ game.accent }};">
+        <div class="game-icon">{{ game.icon }}</div>
+        <h3>{{ game.title }}</h3>
+        <p>{{ game.description }}</p>
+        <a class="btn btn-primary" href="{{ url_for('load_game', game_name=game.name) }}">Play</a>
+      </article>
+      {% endfor %}
+    </section>
+  </main>
+
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+</body>
+</html>
+
