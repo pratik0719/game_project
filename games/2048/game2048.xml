@@ -1,0 +1,4 @@
+﻿<game2048>
+  <grid_size>4</grid_size>
+  <winning_tile>2048</winning_tile>
+</game2048>

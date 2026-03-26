@@ -1,0 +1,6 @@
+﻿<flappy>
+  <gravity>0.38</gravity>
+  <pipe_gap>132</pipe_gap>
+  <pipe_speed>2.4</pipe_speed>
+  <bird_color>#38bdf8</bird_color>
+</flappy>

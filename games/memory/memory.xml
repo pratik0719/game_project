@@ -3,16 +3,15 @@
   <pair_count>8</pair_count>
   <time_bonus>300</time_bonus>
   <symbols>
-    <symbol>??</symbol>
-    <symbol>??</symbol>
-    <symbol>???</symbol>
-    <symbol>??</symbol>
-    <symbol>?</symbol>
-    <symbol>??</symbol>
-    <symbol>??</symbol>
-    <symbol>??</symbol>
-    <symbol>??</symbol>
-    <symbol>??</symbol>
+    <symbol>&#x1F680;</symbol>
+    <symbol>&#x1F3AE;</symbol>
+    <symbol>&#x1F579;</symbol>
+    <symbol>&#x1F47E;</symbol>
+    <symbol>&#x26A1;</symbol>
+    <symbol>&#x1F48E;</symbol>
+    <symbol>&#x1F525;</symbol>
+    <symbol>&#x1F31F;</symbol>
+    <symbol>&#x1F3AF;</symbol>
+    <symbol>&#x1F9E9;</symbol>
   </symbols>
 </memory>
-

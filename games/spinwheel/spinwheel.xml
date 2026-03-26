@@ -1,0 +1,13 @@
+﻿<spinwheel>
+  <spin_duration>4600</spin_duration>
+  <segments>
+    <segment label="Bronze" color="#f97316" prize="40" />
+    <segment label="Silver" color="#60a5fa" prize="60" />
+    <segment label="Golden" color="#facc15" prize="90" />
+    <segment label="Mystery" color="#c084fc" prize="110" />
+    <segment label="Turbo" color="#22d3ee" prize="75" />
+    <segment label="Lucky" color="#34d399" prize="50" />
+    <segment label="Mega" color="#fb7185" prize="120" />
+    <segment label="Bonus" color="#a3e635" prize="80" />
+  </segments>
+</spinwheel>

@@ -20,11 +20,60 @@
       <score>70</score>
       <timestamp>2026-03-26T12:00:00Z</timestamp>
     </entry>
-  <entry><player>pratik</player><score>108</score><timestamp>2026-03-26T14:09:07+00:00</timestamp><meta><correct>5</correct><total>5</total></meta></entry></game>
+  </game>
   <game name="tictactoe">
     <entry>
       <player>Player1</player>
       <score>50</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  </game>
+  <game name="spinwheel">
+    <entry>
+      <player>Player1</player>
+      <score>80</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  <entry><player>pratik</player><score>620</score><timestamp>2026-03-26T14:41:22+00:00</timestamp><meta><wins>9</wins></meta></entry></game>
+  <game name="ludo">
+    <entry>
+      <player>Player1</player>
+      <score>130</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  </game>
+  <game name="chess">
+    <entry>
+      <player>Player1</player>
+      <score>140</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  </game>
+  <game name="2048">
+    <entry>
+      <player>Player1</player>
+      <score>1024</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  </game>
+  <game name="whackamole">
+    <entry>
+      <player>Player1</player>
+      <score>21</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  </game>
+  <game name="flappy">
+    <entry>
+      <player>Player1</player>
+      <score>8</score>
+      <timestamp>2026-03-26T12:00:00Z</timestamp>
+    </entry>
+  </game>
+  <game name="breakout">
+    <entry>
+      <player>Player1</player>
+      <score>360</score>
       <timestamp>2026-03-26T12:00:00Z</timestamp>
     </entry>
   </game>

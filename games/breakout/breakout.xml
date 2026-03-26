@@ -1,0 +1,6 @@
+﻿<breakout>
+  <rows>5</rows>
+  <cols>9</cols>
+  <ball_speed>4.2</ball_speed>
+  <paddle_width>88</paddle_width>
+</breakout>

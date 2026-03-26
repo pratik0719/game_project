@@ -10,10 +10,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
   <script defer src="{{ url_for('static', filename='js/main.js') }}"></script>
 </head>
-<body class="page-leaderboard" data-page="leaderboard">
+<body class="page-leaderboard" data-page="leaderboard" data-games="{% for g in games %}{{ g.name }}{% if not loop.last %},{% endif %}{% endfor %}">
   <header class="site-header">
     <div class="brand-wrap">
-      <span class="brand-icon">??</span>
+      <span class="brand-icon">🏁</span>
       <h1>{{ platform_name }}</h1>
     </div>
     <nav class="top-nav">
@@ -22,13 +22,10 @@
   </header>
 
   <main class="leaderboard-layout">
-    <section class="card-surface">
+    <section class="card-surface" style="padding: 1rem;">
       <h2>Top 5 Scores Per Game</h2>
       <div id="leaderboard-root" class="leaderboard-grid"></div>
     </section>
   </main>
-
-  <div id="toast-container" class="toast-container" aria-live="polite"></div>
 </body>
 </html>
-

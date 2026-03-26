@@ -15,34 +15,116 @@ GAMES_DIR = BASE_DIR / "games"
 CONFIG_FILE = BASE_DIR / "config.xml"
 SCORES_FILE = BASE_DIR / "scores.xml"
 
-GAME_DEFAULTS = {
+GAME_DEFAULTS: dict[str, dict[str, Any]] = {
     "snake": {
         "title": "Snake Rush",
-        "icon": "??",
+        "icon": "🐍",
         "accent": "#39ff14",
         "description": "Classic arcade snake on a neon grid.",
         "script": "snake.js",
+        "config_file": "snake.xml",
+        "category": "arcade",
+        "is_new": False,
     },
     "memory": {
         "title": "Memory Pulse",
-        "icon": "??",
+        "icon": "🧠",
         "accent": "#00e5ff",
         "description": "Flip cards, match pairs, and beat the clock.",
         "script": "memory.js",
+        "config_file": "memory.xml",
+        "category": "casual",
+        "is_new": False,
     },
     "quiz": {
         "title": "Quiz Reactor",
-        "icon": "?",
+        "icon": "❓",
         "accent": "#ffb703",
         "description": "Fast multiple-choice rounds with per-question timers.",
         "script": "quiz.js",
+        "config_file": "quiz.xml",
+        "category": "casual",
+        "is_new": False,
     },
     "tictactoe": {
         "title": "Tic Tac Toe Grid",
-        "icon": "?",
+        "icon": "⭕",
         "accent": "#ff4d9d",
         "description": "Play head-to-head or challenge the AI.",
         "script": "tictactoe.js",
+        "config_file": "tictactoe.xml",
+        "category": "board",
+        "is_new": False,
+    },
+    "spinwheel": {
+        "title": "Spin the Wheel",
+        "icon": "🎡",
+        "accent": "#c084fc",
+        "description": "Spin a colorful prize wheel and stack your wins.",
+        "script": "spinwheel.js",
+        "config_file": "spinwheel.xml",
+        "category": "casual",
+        "is_new": True,
+    },
+    "ludo": {
+        "title": "Ludo Blitz",
+        "icon": "🎲",
+        "accent": "#ff6b35",
+        "description": "Race tokens home in a 2-4 player Ludo showdown.",
+        "script": "ludo.js",
+        "config_file": "ludo.xml",
+        "category": "board",
+        "is_new": True,
+    },
+    "chess": {
+        "title": "Neon Chess",
+        "icon": "♞",
+        "accent": "#f0c040",
+        "description": "Classic chess with legal hints and minimax AI.",
+        "script": "chess.js",
+        "config_file": "chess.xml",
+        "category": "board",
+        "is_new": True,
+    },
+    "2048": {
+        "title": "2048 Surge",
+        "icon": "🔢",
+        "accent": "#fb923c",
+        "description": "Merge tiles, chase 2048, and beat your high score.",
+        "script": "game2048.js",
+        "config_file": "game2048.xml",
+        "category": "board",
+        "is_new": True,
+    },
+    "whackamole": {
+        "title": "Whack-a-Mole",
+        "icon": "🐹",
+        "accent": "#4ade80",
+        "description": "Whack popping moles before the timer ends.",
+        "script": "whackamole.js",
+        "config_file": "whackamole.xml",
+        "category": "arcade",
+        "is_new": True,
+    },
+    "flappy": {
+        "title": "Flappy Burst",
+        "icon": "🐤",
+        "accent": "#38bdf8",
+        "description": "Flap through pipes in a fast side-scrolling challenge.",
+        "script": "flappy.js",
+        "config_file": "flappy.xml",
+        "category": "arcade",
+        "is_new": True,
+    },
+    "breakout": {
+        "title": "Breakout Neon",
+        "icon": "🧱",
+        "accent": "#e879f9",
+        "description": "Smash bricks, preserve lives, and climb levels.",
+        "script": "breakout.js",
+        "config_file": "breakout.xml",
+        "category": "arcade",
+        "is_new": True,
     },
 }
 
@@ -64,6 +146,14 @@ def _coerce_value(value: str) -> Any:
         return int(cleaned)
     except ValueError:
         return cleaned
+
+
+def _to_bool(value: Any, fallback: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return fallback
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _element_to_dict(element: ET.Element) -> Any:
@@ -115,7 +205,7 @@ def _platform_name() -> str:
     return str(_platform_config().get("name", "Neon Arcade Nexus"))
 
 
-def _platform_game_entries() -> list[dict[str, str]]:
+def _platform_game_entries() -> list[dict[str, Any]]:
     platform = _platform_config()
     games_container = platform.get("games", {}) if isinstance(platform, dict) else {}
     games_raw = games_container.get("game", []) if isinstance(games_container, dict) else []
@@ -124,20 +214,30 @@ def _platform_game_entries() -> list[dict[str, str]]:
         games_raw = [games_raw]
 
     merged = {name: dict(config) for name, config in GAME_DEFAULTS.items()}
+
     for game in games_raw:
         attrs = game.get("@attributes", {}) if isinstance(game, dict) else {}
-        name = attrs.get("name")
+        name = str(attrs.get("name", "")).strip().lower()
         if name in merged:
             merged[name]["title"] = attrs.get("title", merged[name]["title"])
             merged[name]["icon"] = attrs.get("icon", merged[name]["icon"])
             merged[name]["accent"] = attrs.get("accent", merged[name]["accent"])
+            merged[name]["category"] = str(attrs.get("category", merged[name]["category"]))
+            merged[name]["description"] = attrs.get("description", merged[name]["description"])
+            merged[name]["is_new"] = _to_bool(attrs.get("is_new"), merged[name]["is_new"])
 
-    ordered_entries = []
+    ordered_entries: list[dict[str, Any]] = []
     for game_name in GAME_DEFAULTS:
         entry = dict(merged[game_name])
         entry["name"] = game_name
         ordered_entries.append(entry)
     return ordered_entries
+
+
+def _game_xml_path(game_name: str) -> Path:
+    info = GAME_DEFAULTS[game_name]
+    config_file = str(info.get("config_file", f"{game_name}.xml"))
+    return GAMES_DIR / game_name / config_file
 
 
 def _ensure_scores_file() -> None:
@@ -233,10 +333,6 @@ def _read_leaderboard(top_n: int = 5) -> dict[str, list[dict[str, Any]]]:
     return leaderboard
 
 
-def _game_xml_path(game_name: str) -> Path:
-    return GAMES_DIR / game_name / f"{game_name}.xml"
-
-
 @app.get("/")
 def home() -> str:
     games = _platform_game_entries()
@@ -244,6 +340,7 @@ def home() -> str:
         "index.html",
         games=games,
         platform_name=_platform_name(),
+        game_count=len(games),
     )
 
 
@@ -270,6 +367,7 @@ def leaderboard_page() -> str:
     return render_template(
         "leaderboard.html",
         platform_name=_platform_name(),
+        games=_platform_game_entries(),
     )
 
 
@@ -340,4 +438,3 @@ _ensure_scores_file()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-

@@ -1,0 +1,5 @@
+﻿<chess>
+  <ai_depth>2</ai_depth>
+  <show_hints>true</show_hints>
+  <board_theme>classic</board_theme>
+</chess>

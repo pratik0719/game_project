@@ -1,0 +1,10 @@
+﻿<ludo>
+  <player_count>4</player_count>
+  <bot_difficulty>medium</bot_difficulty>
+  <token_colors>
+    <color name="Red" code="#ff4d4d" />
+    <color name="Green" code="#22c55e" />
+    <color name="Yellow" code="#facc15" />
+    <color name="Blue" code="#38bdf8" />
+  </token_colors>
+</ludo>

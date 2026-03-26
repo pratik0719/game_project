@@ -1,0 +1,9 @@
+﻿<whackamole>
+  <mole_count>9</mole_count>
+  <game_duration>30</game_duration>
+  <speed_levels>
+    <level second="0" interval="900" />
+    <level second="10" interval="650" />
+    <level second="20" interval="430" />
+  </speed_levels>
+</whackamole>

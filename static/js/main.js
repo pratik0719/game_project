@@ -1,6 +1,20 @@
 ﻿(function () {
   const PAGE = document.body.dataset.page || "";
 
+  const GAME_TITLES = {
+    snake: "Snake Rush",
+    memory: "Memory Pulse",
+    quiz: "Quiz Reactor",
+    tictactoe: "Tic Tac Toe Grid",
+    spinwheel: "Spin the Wheel",
+    ludo: "Ludo Blitz",
+    chess: "Neon Chess",
+    "2048": "2048 Surge",
+    whackamole: "Whack-a-Mole",
+    flappy: "Flappy Burst",
+    breakout: "Breakout Neon",
+  };
+
   const ArcadeAPI = {
     async requestJSON(url, options = {}) {
       const response = await fetch(url, options);
@@ -42,6 +56,18 @@
   };
 
   window.ArcadeAPI = ArcadeAPI;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.body.classList.add("page-ready");
+
+    if (PAGE === "home") {
+      initHomeFilters();
+    }
+
+    if (PAGE === "leaderboard") {
+      renderLeaderboard();
+    }
+  });
 
   function showToast(message, type = "info") {
     const container = document.getElementById("toast-container");
@@ -109,24 +135,57 @@
     });
   }
 
+  function initHomeFilters() {
+    const buttons = Array.from(document.querySelectorAll(".filter-btn"));
+    const cards = Array.from(document.querySelectorAll(".game-card"));
+    if (buttons.length === 0 || cards.length === 0) {
+      return;
+    }
+
+    const applyFilter = (filter) => {
+      cards.forEach((card) => {
+        const category = (card.dataset.category || "").toLowerCase();
+        const visible = filter === "all" || category === filter;
+        card.classList.toggle("hidden", !visible);
+      });
+
+      buttons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.filter === filter);
+      });
+    };
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        applyFilter((button.dataset.filter || "all").toLowerCase());
+      });
+    });
+
+    applyFilter("all");
+  }
+
   async function renderLeaderboard() {
     const root = document.getElementById("leaderboard-root");
     if (!root) {
       return;
     }
 
+    const gameNames = (document.body.dataset.games || "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean);
+
     root.innerHTML = "<p>Loading leaderboard...</p>";
     try {
       const response = await ArcadeAPI.getLeaderboard(5);
       const data = response.leaderboard || {};
-      const gameNames = ["snake", "memory", "quiz", "tictactoe"];
+      const names = gameNames.length > 0 ? gameNames : Object.keys(data);
 
       root.innerHTML = "";
-      gameNames.forEach((gameName) => {
+      names.forEach((gameName) => {
         const entries = Array.isArray(data[gameName]) ? data[gameName] : [];
         const card = document.createElement("article");
         card.className = "lb-card card-surface";
-        card.innerHTML = `<h3>${formatGameTitle(gameName)}</h3>`;
+        card.innerHTML = `<h3>${escapeHtml(formatGameTitle(gameName))}</h3>`;
 
         const list = document.createElement("ol");
         list.className = "lb-list";
@@ -154,18 +213,7 @@
   }
 
   function formatGameTitle(name) {
-    switch (name) {
-      case "snake":
-        return "Snake Rush";
-      case "memory":
-        return "Memory Pulse";
-      case "quiz":
-        return "Quiz Reactor";
-      case "tictactoe":
-        return "Tic Tac Toe Grid";
-      default:
-        return name;
-    }
+    return GAME_TITLES[name] || name;
   }
 
   function escapeHtml(value) {
@@ -176,9 +224,4 @@
       .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#39;");
   }
-
-  if (PAGE === "leaderboard") {
-    renderLeaderboard();
-  }
 })();
-

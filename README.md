@@ -1,6 +1,6 @@
 ﻿# game_project
 
-Neon arcade multi-game platform built with Flask + XML-configured games.
+Neon Arcade Nexus: multi-game platform built with Flask + XML-configured games + Vanilla JS.
 
 ## Setup
 
@@ -11,12 +11,19 @@ python app.py
 
 Open: `http://127.0.0.1:5000`
 
-## Included games
+## Included games (11)
 
-- Snake (canvas)
-- Memory Match
-- Quiz
-- Tic Tac Toe (2-player or vs AI)
+- Snake Rush
+- Memory Pulse
+- Quiz Reactor
+- Tic Tac Toe Grid
+- Spin the Wheel
+- Ludo Blitz
+- Neon Chess
+- 2048 Surge
+- Whack-a-Mole
+- Flappy Burst
+- Breakout Neon
 
 ## API endpoints
 
@@ -25,4 +32,3 @@ Open: `http://127.0.0.1:5000`
 - `GET /api/config/<game_name>`
 - `POST /api/score`
 - `GET /api/leaderboard`
-
