@@ -1,5 +1,5 @@
 ﻿<snake>
-  <speed>9</speed>
+  <speed>3</speed>
   <grid_size>20</grid_size>
   <canvas_width>420</canvas_width>
   <canvas_height>420</canvas_height>

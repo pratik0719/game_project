@@ -21,7 +21,7 @@
   const canvasWidth = Number(config.canvas_width || 420);
   const canvasHeight = Number(config.canvas_height || 420);
   const startLength = Number(config.start_length || 3);
-  const speed = Number(config.speed || 9);
+  const speed = Number(config.speed || 3);
   const foodPoints = Number(config.food_points || 10);
 
   const cellWidth = canvasWidth / gridSize;
