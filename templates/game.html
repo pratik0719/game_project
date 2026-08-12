@@ -27,7 +27,7 @@
   </header>
 
   <main class="game-layout">
-    <section id="multiplayer-panel" class="multiplayer-panel card-surface" data-current-game="<%= gameName %>">
+    <section id="multiplayer-panel" class="multiplayer-panel card-surface" data-current-game="<%= gameName %>" data-mp-ready="<%= gameMultiplayerReady %>">
       <div class="multiplayer-head">
         <div>
           <p class="eyebrow">MULTIPLAYER</p>
@@ -49,7 +49,8 @@
         <form id="mp-create-form" class="mp-card">
           <input id="mp-game-select" type="hidden" value="<%= gameName %>" />
           <label>Create room</label>
-          <button class="btn btn-primary" type="submit">Create Room</button>
+          <button id="mp-create-room-btn" class="btn btn-primary" type="submit" <%= gameMultiplayerReady ? "" : "disabled" %>>Create Room</button>
+          <p id="mp-create-note" class="mp-muted" <%= gameMultiplayerReady ? "hidden" : "" %>>Multiplayer for this game is coming soon. You can still join any room from here.</p>
         </form>
 
         <form id="mp-join-form" class="mp-card">

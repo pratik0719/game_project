@@ -191,30 +191,49 @@ const config = parser.parse(xmlText);
 
 ### Socket.IO events
 Client to server:
-`create_room`, `join_room`, `leave_room`, `start_game`, `send_message`, `game_action`, `request_room_state`
+`create_room`, `join_room`, `leave_room`, `start_game`, `game_action`, `play_again`, `send_message`, `request_room_state`
 
 Server to client:
-`room_created`, `room_joined`, `room_state`, `player_joined`, `player_left`, `host_changed`, `game_started`, `game_state`, `chat_message`, `system_message`, `room_error`
+`room_created`, `room_joined`, `room_state`, `player_joined`, `player_left`, `host_changed`, `game_started`, `game_state`, `game_over`, `match_ended`, `chat_message`, `system_message`, `room_error`
 
 Create and join use acknowledgement callbacks so the UI can display errors immediately.
 
-### Game sync adapter
-Games can send reusable multiplayer actions from the frontend:
+### One room = one shared match
+A room is permanently locked to the game it was created for. The creator selects a game, the server stores its `gameId` on the room, and every player who joins receives that same `gameId` and is forced onto that game screen (`openRoomGame` in `static/js/multiplayer.js`). Joiners never choose a game; the room's game is authoritative. Actions that reference a different `gameId` are rejected by the server.
+
+### Server-authoritative game state
+The browser never decides moves, turns, scores or winners. The server owns one shared `gameState` per room:
+
+- `create_room { playerName, gameId }` stores the locked game and makes the creator Player 1.
+- `join_room { playerName, roomCode }` adds Player 2 and returns the room's `gameId`.
+- `start_game` (host only) initializes one shared match, assigns roles, picks the first turn and sets the room to `playing`.
+- `game_action { roomCode, action }` validates membership, turn and move against the game adapter, updates the shared state, then broadcasts `game_state` (and `game_over` when finished) to the whole room.
+- `play_again` resets the shared state while preserving room, players, roles and the locked game.
+- If a player disconnects mid-match, the match is ended, the room returns to `waiting` (no bot is created) and the remaining player is notified; the room is deleted when no players remain.
+
+### Game adapters
+Server-side handlers live in `server/gameHandlers/`. Each adapter implements `createInitialState`, `assignRoles`, `firstTurn`, `nextTurn`, `validateAction`, `applyAction`, `checkWinner` and `resetState`:
 
 ```js
-window.MultiplayerAPI.sendGameAction({
-  type: "make_move",
-  data: {}
-});
+const gameHandlers = {
+  "tictactoe": {
+    createInitialState,
+    assignRoles,
+    validateAction,
+    applyAction,
+    checkWinner
+  }
+};
 ```
-
-The backend checks that the room exists, the sender belongs to the room, and the action matches the selected game before passing it to `server/gameHandlers/index.js`. No game engine has full server-side move validation yet, so the adapter currently rejects `game_action` calls with a clear error instead of trusting the client.
 
 ### Multiplayer readiness
 Room lobby, player list, host transfer, start status, invite links and chat are available for all 11 games.
 
-Game-state multiplayer adapters still need to be implemented for:
-Snake Rush, Memory Pulse, Quiz Reactor, Tic Tac Toe Grid, Spin the Wheel, Ludo Blitz, Neon Chess, 2048 Surge, Whack-a-Mole, Flappy Burst and Breakout Neon.
+Games with a **complete** multiplayer game-state adapter (shared server state, role assignment, turn validation, move validation, winner detection, Socket.IO sync):
+- **Tic Tac Toe Grid** (`tictactoe`)
+
+Games still in single-player mode until their adapters are implemented:
+Snake Rush, Memory Pulse, Quiz Reactor, Spin the Wheel, Ludo Blitz, Neon Chess, 2048 Surge, Whack-a-Mole, Flappy Burst and Breakout Neon. These can still be played normally and can host/join no rooms until flagged `multiplayerReady: true` in `server/gameHandlers/index.js`.
 
 ### Request / Response format
 - Score save request payload:

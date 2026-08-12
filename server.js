@@ -84,7 +84,11 @@ function gameEntries() {
     merged[name].isNew = toBoolean(game["@_is_new"], merged[name].isNew);
   }
 
-  return Object.keys(GAME_DEFAULTS).map((name) => ({ name, ...merged[name] }));
+  return Object.keys(GAME_DEFAULTS).map((name) => ({
+    name,
+    ...merged[name],
+    multiplayerReady: Boolean(multiplayerGameConfig[name]?.multiplayerReady),
+  }));
 }
 
 function gameConfigPath(gameName) {
@@ -165,7 +169,14 @@ app.get("/game/:gameName", (request, response) => {
   const gameName = request.params.gameName.trim().toLowerCase();
   const game = gameEntries().find((entry) => entry.name === gameName);
   if (!game) return response.sendStatus(404);
-  return response.render("game", { gameName, gameTitle: game.title, gameScript: GAME_DEFAULTS[gameName].script, accent: game.accent, platformName: platformName() });
+  return response.render("game", {
+    gameName,
+    gameTitle: game.title,
+    gameScript: GAME_DEFAULTS[gameName].script,
+    accent: game.accent,
+    platformName: platformName(),
+    gameMultiplayerReady: Boolean(game.multiplayerReady),
+  });
 });
 
 app.get("/leaderboard", (_request, response) => response.render("leaderboard", { platformName: platformName(), games: gameEntries() }));

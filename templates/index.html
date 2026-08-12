@@ -35,7 +35,7 @@
       </div>
     </section>
 
-    <section id="multiplayer-panel" class="multiplayer-panel card-surface" data-current-game="">
+    <section id="multiplayer-panel" class="multiplayer-panel card-surface" data-current-game="" data-mp-ready="true">
       <div class="multiplayer-head">
         <div>
           <p class="eyebrow">MULTIPLAYER</p>
@@ -57,11 +57,12 @@
         <form id="mp-create-form" class="mp-card">
           <label for="mp-game-select">Create room for</label>
           <select id="mp-game-select">
-            <% games.forEach((game) => { %>
+            <% games.filter((game) => game.multiplayerReady).forEach((game) => { %>
               <option value="<%= game.name %>"><%= game.title %></option>
             <% }); %>
           </select>
-          <button class="btn btn-primary" type="submit">Create Room</button>
+          <button id="mp-create-room-btn" class="btn btn-primary" type="submit">Create Room</button>
+          <p id="mp-create-note" class="mp-muted">Rooms can only be created for multiplayer-ready games. The other games stay available in single-player mode.</p>
         </form>
 
         <form id="mp-join-form" class="mp-card">
@@ -123,6 +124,7 @@
           <div class="badge-row">
             <span class="category-chip"><%= game.category.toUpperCase() %></span>
             <% if (game.isNew) { %><span class="new-badge">NEW</span><% } %>
+            <% if (game.multiplayerReady) { %><span class="new-badge mp-badge">MULTIPLAYER</span><% } %>
           </div>
           <h3><%= game.title %></h3>
           <p><%= game.description %></p>

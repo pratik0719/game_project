@@ -14,6 +14,7 @@
     playerName: "",
     clientId: getOrCreateClientId(),
     currentGame: (panel.dataset.currentGame || "").trim().toLowerCase(),
+    mpReady: panel.dataset.mpReady === "true",
   };
 
   const els = {
@@ -22,6 +23,8 @@
     nameInput: document.getElementById("mp-player-name"),
     nameError: document.getElementById("mp-name-error"),
     createForm: document.getElementById("mp-create-form"),
+    createRoomBtn: document.getElementById("mp-create-room-btn"),
+    createNote: document.getElementById("mp-create-note"),
     gameSelect: document.getElementById("mp-game-select"),
     joinForm: document.getElementById("mp-join-form"),
     roomCodeInput: document.getElementById("mp-room-code"),
@@ -41,30 +44,90 @@
     chatInput: document.getElementById("mp-chat-input"),
   };
 
+  /**
+   * Bridge exposed to game scripts. Available synchronously so games can
+   * subscribe before the socket connects. Games only ever receive
+   * server-provided state and only ever send move intents.
+   */
+  const listeners = {
+    room: [],
+    game_started: [],
+    game_state: [],
+    game_over: [],
+    match_ended: [],
+    player_left: [],
+    room_error: [],
+  };
+
+  const api = {
+    getRoom() {
+      return state.room;
+    },
+    getGameState() {
+      return state.room?.gameState || null;
+    },
+    getSocketId() {
+      return state.socket?.id || null;
+    },
+    getRole() {
+      return me()?.role || null;
+    },
+    isMyTurn() {
+      return Boolean(state.room && state.socket && state.room.currentTurn === state.socket.id);
+    },
+    isInRoom() {
+      return Boolean(state.room);
+    },
+    isMatchActive() {
+      return Boolean(state.room && state.room.status === "playing" && state.room.gameState);
+    },
+    sendAction(action) {
+      if (!state.room || !state.socket?.connected) return false;
+      state.socket.emit("game_action", { roomCode: state.room.code, gameId: state.room.gameId, action });
+      return true;
+    },
+    playAgain() {
+      if (!state.room || !state.socket?.connected) return false;
+      state.socket.emit("play_again", { roomCode: state.room.code });
+      return true;
+    },
+    requestRoomState() {
+      if (!state.room || !state.socket?.connected) return;
+      state.socket.emit("request_room_state", { roomCode: state.room.code });
+    },
+    leaveRoom() {
+      leaveCurrentRoom();
+    },
+    openRoomGame(gameId, roomCode) {
+      openRoomGame(gameId, roomCode);
+    },
+    on(event, callback) {
+      if (!listeners[event]) return;
+      listeners[event].push(callback);
+    },
+    off(event, callback) {
+      const list = listeners[event];
+      if (!list) return;
+      const index = list.indexOf(callback);
+      if (index !== -1) list.splice(index, 1);
+    },
+  };
+  window.MultiplayerAPI = api;
+
   document.addEventListener("DOMContentLoaded", init);
 
   function init() {
     state.playerName = sessionStorage.getItem(STORAGE.name) || localStorage.getItem(STORAGE.name) || "";
     if (els.nameInput) els.nameInput.value = state.playerName;
 
+    // Games without a multiplayer adapter cannot host a room.
+    if (els.createRoomBtn) els.createRoomBtn.disabled = !state.mpReady;
+    if (els.createNote) els.createNote.hidden = state.mpReady;
+
     state.socket = io({ transports: ["websocket", "polling"] });
     bindSocket();
     bindForms();
     hydrateInviteCode();
-
-    window.MultiplayerAPI = {
-      getRoom: () => state.room,
-      getSocket: () => state.socket,
-      sendGameAction(action) {
-        if (!state.room) return false;
-        state.socket.emit("game_action", {
-          roomCode: state.room.code,
-          gameId: state.room.gameId,
-          action,
-        });
-        return true;
-      },
-    };
   }
 
   function bindSocket() {
@@ -75,14 +138,35 @@
     });
     state.socket.on("disconnect", () => setConnection("Offline", "offline"));
     state.socket.on("connect_error", () => setError("Connection failed. Check that the server is running."));
-    state.socket.on("room_state", renderRoom);
-    state.socket.on("player_joined", (payload) => payload?.room && renderRoom(payload.room));
-    state.socket.on("player_left", (payload) => payload?.room && renderRoom(payload.room));
-    state.socket.on("host_changed", (payload) => payload?.room && renderRoom(payload.room));
-    state.socket.on("game_started", onGameStarted);
+    state.socket.on("room_created", (payload) => payload?.room && applyRoom(payload.room));
+    state.socket.on("room_joined", (payload) => payload?.room && applyRoom(payload.room));
+    state.socket.on("room_state", (room) => room && applyRoom(room));
+    state.socket.on("player_joined", (payload) => payload?.room && applyRoom(payload.room));
+    state.socket.on("player_left", (payload) => {
+      if (payload?.room) applyRoom(payload.room);
+      emitLocal("player_left", payload);
+    });
+    state.socket.on("host_changed", (payload) => payload?.room && applyRoom(payload.room));
+    state.socket.on("game_started", (room) => {
+      applyRoom(room);
+      openRoomGame(room?.gameId, room?.code);
+      emitLocal("game_started", room);
+    });
+    state.socket.on("game_state", (payload) => {
+      syncRoomFromGameState(payload);
+      emitLocal("game_state", payload);
+    });
+    state.socket.on("game_over", (payload) => emitLocal("game_over", payload));
+    state.socket.on("match_ended", (payload) => {
+      if (payload?.room) applyRoom(payload.room);
+      emitLocal("match_ended", payload);
+    });
     state.socket.on("chat_message", appendMessage);
     state.socket.on("system_message", appendMessage);
-    state.socket.on("room_error", (payload) => setError(payload?.error || "Room action failed."));
+    state.socket.on("room_error", (payload) => {
+      setError(payload?.error || "Room action failed.");
+      emitLocal("room_error", payload);
+    });
   }
 
   function bindForms() {
@@ -104,6 +188,10 @@
       event.preventDefault();
       const name = requireName();
       if (!name) return;
+      if (!state.mpReady) {
+        setError("This game does not support multiplayer rooms yet.");
+        return;
+      }
       const gameId = selectedGameId();
       emitWithAck("create_room", { playerName: name, gameId, clientId: state.clientId }, (result) => {
         if (!result.ok) {
@@ -112,9 +200,10 @@
         }
         sessionStorage.setItem(STORAGE.lastRoom, result.roomCode);
         if (els.roomCodeInput) els.roomCodeInput.value = result.roomCode;
-        renderRoom(result.room);
+        applyRoom(result.room);
         setError("");
         toast("Room created.", "success");
+        openRoomGame(result.room?.gameId, result.roomCode);
       });
     });
 
@@ -124,13 +213,7 @@
       joinRoom(code, false);
     });
 
-    els.leaveRoom?.addEventListener("click", () => {
-      if (state.room) state.socket.emit("leave_room", { roomCode: state.room.code });
-      sessionStorage.removeItem(STORAGE.lastRoom);
-      state.room = null;
-      renderRoom(null);
-      toast("Left room.", "info");
-    });
+    els.leaveRoom?.addEventListener("click", leaveCurrentRoom);
 
     els.startGame?.addEventListener("click", () => {
       if (!state.room) return;
@@ -164,20 +247,74 @@
     if (!name) return;
     const roomCode = code.trim().toUpperCase();
     if (!/^[A-Z2-9]{6}$/.test(roomCode) || /[0O1I]/.test(roomCode)) {
-      setError("Invalid room code.");
+      if (!silent) setError("Invalid room code.");
       return;
     }
     emitWithAck("join_room", { playerName: name, roomCode, clientId: state.clientId }, (result) => {
       if (!result.ok) {
         if (!silent) setError(result.error || "Unable to join room.");
+        // Let any game waiting on a stale room fall back to single-player.
+        emitLocal("room", null);
         return;
       }
       sessionStorage.setItem(STORAGE.lastRoom, result.roomCode);
-      renderRoom(result.room);
+      applyRoom(result.room);
       setError("");
       if (!silent) toast("Joined room.", "success");
-      redirectToRoomGame(result.room);
+      // The room's game is locked — the joiner is forced onto it.
+      openRoomGame(result.room?.gameId, result.roomCode);
     });
+  }
+
+  /**
+   * Central function that only ever loads the game assigned to a room.
+   * Every path that opens a game for a room must go through here.
+   */
+  function openRoomGame(gameId, roomCode) {
+    const canonical = String(gameId || "").trim().toLowerCase();
+    const code = String(roomCode || "").trim().toUpperCase();
+    if (!canonical || !code) return;
+    if (state.currentGame === canonical) return; // already on the assigned game page
+    window.location.assign(`/game/${encodeURIComponent(canonical)}?room=${encodeURIComponent(code)}`);
+  }
+
+  function applyRoom(room) {
+    if (!room) return;
+    state.room = room;
+    renderRoom(room);
+    emitLocal("room", room);
+  }
+
+  function syncRoomFromGameState(payload) {
+    if (!state.room || !payload) return;
+    if (payload.gameState !== undefined) state.room.gameState = payload.gameState;
+    if (payload.currentTurn !== undefined) state.room.currentTurn = payload.currentTurn;
+    if (payload.status) state.room.status = payload.status;
+    if (Array.isArray(payload.players)) state.room.players = payload.players;
+  }
+
+  function emitLocal(event, detail) {
+    (listeners[event] || []).forEach((callback) => {
+      try {
+        callback(detail);
+      } catch (error) {
+        console.error("Multiplayer listener error:", error);
+      }
+    });
+  }
+
+  function leaveCurrentRoom() {
+    if (state.room) state.socket.emit("leave_room", { roomCode: state.room.code });
+    sessionStorage.removeItem(STORAGE.lastRoom);
+    state.room = null;
+    renderRoom(null);
+    emitLocal("room", null);
+    toast("Left room.", "info");
+  }
+
+  function me() {
+    if (!state.room || !state.socket) return null;
+    return state.room.players?.find((player) => player.socketId === state.socket.id) || null;
   }
 
   function emitWithAck(eventName, payload, callback) {
@@ -208,7 +345,9 @@
     setText(els.lobbyCodeDisplay, room.code);
     if (els.roomCodeInput) els.roomCodeInput.value = room.code;
     setText(els.lobbyGame, room.gameTitle || room.gameId);
-    setText(els.lobbyStatus, `${room.status === "waiting" ? "Waiting" : "Started"} - ${room.players.length}/${room.maxPlayers} players`);
+    const statusLabel =
+      room.status === "waiting" ? "Waiting" : room.status === "playing" ? "Playing" : "Started";
+    setText(els.lobbyStatus, `${statusLabel} - ${room.players.length}/${room.maxPlayers} players`);
 
     const isHost = room.hostId === state.socket.id;
     if (els.startGame) {
@@ -225,7 +364,7 @@
     players.forEach((player) => {
       const item = document.createElement("li");
       const name = document.createElement("span");
-      name.textContent = `${player.playerNumber}. ${player.name}`;
+      name.textContent = `${player.playerNumber}. ${player.name}${player.role ? ` (${player.role})` : ""}`;
       item.appendChild(name);
       if (player.isHost) {
         const badge = document.createElement("span");
@@ -259,16 +398,6 @@
     row.appendChild(text);
     els.chatLog.appendChild(row);
     els.chatLog.scrollTop = els.chatLog.scrollHeight;
-  }
-
-  function onGameStarted(room) {
-    renderRoom(room);
-    redirectToRoomGame(room);
-  }
-
-  function redirectToRoomGame(room) {
-    if (!room?.gameId || state.currentGame === room.gameId) return;
-    window.location.assign(`/game/${encodeURIComponent(room.gameId)}?room=${encodeURIComponent(room.code)}`);
   }
 
   function hydrateInviteCode() {

@@ -1,7 +1,7 @@
 "use strict";
 
-const { handleGameAction } = require("./gameHandlers");
 const { isValidRoomCode, normalizeRoomCode } = require("./roomManager");
+const { canonicalGameId, getGameConfig, startGame, resetGame, handleGameAction } = require("./gameHandlers");
 
 const rateBuckets = new Map();
 const RATE_LIMITS = {
@@ -19,12 +19,20 @@ function registerSocketHandlers(io, roomManager) {
         const playerName = validateName(payload?.playerName);
         if (!playerName.ok) return playerName;
 
-        const gameId = normalizeGameId(payload?.gameId);
+        // A room can only be created for a supported multiplayer game.
+        const gameId = canonicalGameId(payload?.gameId);
+        const config = getGameConfig(gameId);
+        if (!config) return { ok: false, error: "Invalid game selected." };
+        if (!config.multiplayerReady) return { ok: false, error: "This game does not support multiplayer rooms yet." };
+
         const clientId = validateClientId(payload?.clientId);
         if (!clientId.ok) return clientId;
 
         const existing = roomManager.leaveBySocket(socket.id);
-        if (existing && !existing.deleted) broadcastLeave(io, roomManager, existing);
+        if (existing) {
+          socket.leave(existing.roomCode);
+          if (!existing.deleted) handlePlayerLeave(io, roomManager, existing);
+        }
 
         const result = roomManager.createRoom({ socketId: socket.id, clientId: clientId.value, playerName: playerName.value, gameId });
         if (!result.ok) return result;
@@ -32,8 +40,8 @@ function registerSocketHandlers(io, roomManager) {
         socket.join(result.roomCode);
         roomManager.addSystemMessage(roomManager.getRoom(result.roomCode), `${playerName.value} created the room.`);
         const publicRoom = roomManager.publicRoom(roomManager.getRoom(result.roomCode));
-        socket.emit("room_created", { roomCode: result.roomCode, room: publicRoom });
-        return { ok: true, roomCode: result.roomCode, room: publicRoom };
+        socket.emit("room_created", { roomCode: result.roomCode, gameId: publicRoom.gameId, room: publicRoom });
+        return { ok: true, roomCode: result.roomCode, gameId: publicRoom.gameId, room: publicRoom };
       });
     });
 
@@ -50,8 +58,16 @@ function registerSocketHandlers(io, roomManager) {
         const roomCode = normalizeRoomCode(payload?.roomCode);
         if (!isValidRoomCode(roomCode)) return { ok: false, error: "Invalid room code." };
 
+        // Preflight BEFORE touching any state: a failed join must never
+        // evict the user from the room they are currently in.
+        const preflight = roomManager.preflightJoin({ roomCode, clientId: clientId.value });
+        if (!preflight.ok) return preflight;
+
         const existing = roomManager.leaveBySocket(socket.id);
-        if (existing && !existing.deleted) broadcastLeave(io, roomManager, existing);
+        if (existing) {
+          socket.leave(existing.roomCode);
+          if (!existing.deleted) handlePlayerLeave(io, roomManager, existing);
+        }
 
         const result = roomManager.joinRoom({ socketId: socket.id, clientId: clientId.value, playerName: playerName.value, roomCode });
         if (!result.ok) return result;
@@ -63,10 +79,16 @@ function registerSocketHandlers(io, roomManager) {
           socket.to(result.roomCode).emit("player_joined", { room: roomManager.publicRoom(room) });
           io.to(result.roomCode).emit("system_message", systemMessage);
           io.to(result.roomCode).emit("room_state", roomManager.publicRoom(room));
+        } else {
+          // A reconnecting player must be re-synced with the shared state.
+          const room = roomManager.getRoom(result.roomCode);
+          socket.emit("room_state", roomManager.publicRoom(room));
+          socket.emit("game_state", gameStatePayload(room));
         }
 
-        socket.emit("room_joined", { roomCode: result.roomCode, room: result.room });
-        return { ok: true, roomCode: result.roomCode, room: result.room };
+        // The joining player always receives the room's locked game.
+        socket.emit("room_joined", { roomCode: result.roomCode, gameId: result.room.gameId, room: result.room });
+        return { ok: true, roomCode: result.roomCode, gameId: result.room.gameId, room: result.room };
       });
     });
 
@@ -74,7 +96,7 @@ function registerSocketHandlers(io, roomManager) {
       const result = roomManager.leaveBySocket(socket.id);
       if (result) {
         socket.leave(result.roomCode);
-        if (!result.deleted) broadcastLeave(io, roomManager, result);
+        if (!result.deleted) handlePlayerLeave(io, roomManager, result);
       }
     });
 
@@ -84,7 +106,9 @@ function registerSocketHandlers(io, roomManager) {
         socket.emit("room_error", { error: "You are not a member of that room." });
         return;
       }
-      socket.emit("room_state", roomManager.publicRoom(roomManager.getRoom(roomCode)));
+      const room = roomManager.getRoom(roomCode);
+      socket.emit("room_state", roomManager.publicRoom(room));
+      socket.emit("game_state", gameStatePayload(room));
     });
 
     socket.on("start_game", (payload) => {
@@ -98,15 +122,59 @@ function registerSocketHandlers(io, roomManager) {
         socket.emit("room_error", { error: "Only the host can start the game." });
         return;
       }
+      if (room.status !== "waiting") {
+        socket.emit("room_error", { error: "The match has already started." });
+        return;
+      }
       if (room.players.length < room.minPlayers) {
         socket.emit("room_error", { error: `Need at least ${room.minPlayers} players to start.` });
         return;
       }
-      const publicRoom = roomManager.markStarted(room);
-      const systemMessage = roomManager.addSystemMessage(room, "The host started the game.");
+
+      // Initialize ONE shared match: game state, roles, first turn, status.
+      const started = startGame(room);
+      if (!started.ok) {
+        socket.emit("room_error", { error: started.error });
+        return;
+      }
+
+      const publicRoom = roomManager.publicRoom(room);
+      const systemMessage = roomManager.addSystemMessage(room, "The match has started.");
       io.to(room.code).emit("system_message", systemMessage);
       io.to(room.code).emit("game_started", publicRoom);
-      io.to(room.code).emit("room_state", roomManager.publicRoom(room));
+      io.to(room.code).emit("room_state", publicRoom);
+      io.to(room.code).emit("game_state", gameStatePayload(room));
+    });
+
+    socket.on("play_again", (payload) => {
+      const roomCode = normalizeRoomCode(payload?.roomCode);
+      const room = roomManager.getRoom(roomCode);
+      if (!room || !roomManager.isSocketInRoom(socket.id, roomCode)) {
+        socket.emit("room_error", { error: "You are not a member of that room." });
+        return;
+      }
+      if (room.status !== "playing" || !room.gameState) {
+        socket.emit("room_error", { error: "There is no finished match to replay." });
+        return;
+      }
+      if (!room.gameState.winner && !room.gameState.draw) {
+        socket.emit("room_error", { error: "The current match is still in progress." });
+        return;
+      }
+
+      // Reset the shared state. Room, players, roles and game stay locked.
+      const reset = resetGame(room);
+      if (!reset.ok) {
+        socket.emit("room_error", { error: reset.error });
+        return;
+      }
+
+      const publicRoom = roomManager.publicRoom(room);
+      const systemMessage = roomManager.addSystemMessage(room, "A new round is starting.");
+      io.to(room.code).emit("system_message", systemMessage);
+      io.to(room.code).emit("game_started", publicRoom);
+      io.to(room.code).emit("room_state", publicRoom);
+      io.to(room.code).emit("game_state", gameStatePayload(room));
     });
 
     socket.on("send_message", (payload) => {
@@ -142,33 +210,90 @@ function registerSocketHandlers(io, roomManager) {
         socket.emit("room_error", { error: "You are not a member of that room." });
         return;
       }
-      if (normalizeGameId(payload?.gameId) !== room.gameId) {
+
+      // The room's game is authoritative. A client-provided gameId is only
+      // compared for extra safety and is never used to change the room.
+      const clientGameId = canonicalGameId(payload?.gameId);
+      if (clientGameId && clientGameId !== room.gameId) {
         socket.emit("room_error", { error: "That action does not belong to this room's game." });
         return;
       }
+
       const result = handleGameAction(room, socket, payload);
       if (!result.ok) {
         socket.emit("room_error", { error: result.error });
         return;
       }
-      io.to(room.code).emit("game_state", result.gameState);
+
+      io.to(room.code).emit("game_state", gameStatePayload(room));
+      if (result.finished) {
+        io.to(room.code).emit("game_over", {
+          roomCode: room.code,
+          gameId: room.gameId,
+          winner: result.winner,
+          draw: result.draw,
+          gameState: room.gameState,
+        });
+      }
     });
 
     socket.on("disconnect", () => {
       const result = roomManager.leaveBySocket(socket.id);
-      if (result && !result.deleted) broadcastLeave(io, roomManager, result);
+      if (result && !result.deleted) handlePlayerLeave(io, roomManager, result);
     });
   });
 }
 
-function broadcastLeave(io, roomManager, result) {
-  const room = result.room;
-  const systemText = `${result.player.name} left the room.`;
-  const systemMessage = room ? roomManager.addSystemMessage(roomManager.getRoom(result.roomCode), systemText) : null;
-  io.to(result.roomCode).emit("player_left", { player: result.player, room });
-  if (result.hostChanged) io.to(result.roomCode).emit("host_changed", { host: result.hostChanged, room });
-  if (systemMessage) io.to(result.roomCode).emit("system_message", systemMessage);
-  if (room) io.to(result.roomCode).emit("room_state", room);
+function gameStatePayload(room) {
+  const currentPlayer = room.players.find((player) => player.socketId === room.currentTurn);
+  return {
+    gameId: room.gameId,
+    gameState: room.gameState,
+    currentTurn: room.currentTurn,
+    currentTurnRole: currentPlayer?.role || null,
+    status: room.status,
+    winner: room.gameState?.winner ?? null,
+    draw: room.gameState?.draw ?? false,
+    round: room.round || 0,
+    players: room.players.map((player) => ({
+      socketId: player.socketId,
+      name: player.name,
+      playerNumber: player.playerNumber,
+      isHost: Boolean(player.isHost),
+      role: player.role || null,
+    })),
+  };
+}
+
+/**
+ * Common departure path for leave_room and disconnect.
+ * If an active match is running, it is ended: shared state is cleared,
+ * the room returns to "waiting" and the remaining player is notified.
+ */
+function handlePlayerLeave(io, roomManager, result) {
+  const room = roomManager.getRoom(result.roomCode);
+  if (room && room.status === "playing") {
+    roomManager.endActiveMatch(room);
+    const systemMessage = roomManager.addSystemMessage(
+      room,
+      `${result.player.name} left - the match was ended. Waiting for players...`
+    );
+    io.to(result.roomCode).emit("match_ended", {
+      roomCode: result.roomCode,
+      reason: "opponent_left",
+      room: roomManager.publicRoom(room),
+    });
+    io.to(result.roomCode).emit("system_message", systemMessage);
+  }
+
+  const updatedRoom = roomManager.getRoom(result.roomCode);
+  const publicRoom = updatedRoom ? roomManager.publicRoom(updatedRoom) : null;
+  io.to(result.roomCode).emit("player_left", { player: result.player, room: publicRoom });
+  if (result.hostChanged) io.to(result.roomCode).emit("host_changed", { host: result.hostChanged, room: publicRoom });
+  if (updatedRoom) {
+    io.to(result.roomCode).emit("room_state", publicRoom);
+    io.to(result.roomCode).emit("game_state", gameStatePayload(updatedRoom));
+  }
 }
 
 function withAck(ack, handler) {
@@ -191,10 +316,6 @@ function validateClientId(value) {
   const clientId = String(value || "").trim();
   if (!/^[a-zA-Z0-9_-]{12,80}$/.test(clientId)) return { ok: false, error: "Invalid browser session. Refresh and try again." };
   return { ok: true, value: clientId };
-}
-
-function normalizeGameId(value) {
-  return String(value || "").trim().toLowerCase();
 }
 
 function sanitizeText(value, maxLength) {

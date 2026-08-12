@@ -17,6 +17,7 @@ class RoomManager {
   createRoom({ socketId, clientId, playerName, gameId }) {
     const config = this.gameConfig[gameId];
     if (!config) return { ok: false, error: "Invalid game selected." };
+    if (!config.multiplayerReady) return { ok: false, error: "This game does not support multiplayer rooms yet." };
 
     const room = {
       code: this.generateRoomCode(),
@@ -28,6 +29,8 @@ class RoomManager {
       maxPlayers: config.maxPlayers,
       minPlayers: config.minPlayers,
       gameState: null,
+      currentTurn: null,
+      round: 0,
       messages: [],
       createdAt: Date.now(),
       lastActivityAt: Date.now(),
@@ -36,6 +39,21 @@ class RoomManager {
     this.rooms.set(room.code, room);
     this.addPlayer(room, { socketId, clientId, name: playerName });
     return { ok: true, room: this.publicRoom(room), roomCode: room.code };
+  }
+
+  /**
+   * Validate that a join attempt can succeed WITHOUT mutating any state.
+   * Used before leaveBySocket so a failed join (bad code, full room, etc.)
+   * never evicts the user from the room they are currently in.
+   */
+  preflightJoin({ roomCode, clientId }) {
+    const code = normalizeRoomCode(roomCode);
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: "Room not found." };
+    if (room.status !== "waiting") return { ok: false, error: "Game has already started." };
+    const existingByClient = room.players.find((player) => player.clientId === clientId);
+    if (!existingByClient && room.players.length >= room.maxPlayers) return { ok: false, error: "Room is full." };
+    return { ok: true };
   }
 
   joinRoom({ socketId, clientId, playerName, roomCode }) {
@@ -123,6 +141,8 @@ class RoomManager {
       maxPlayers: room.maxPlayers,
       minPlayers: room.minPlayers,
       gameState: room.gameState,
+      currentTurn: room.currentTurn,
+      round: room.round || 0,
       messages: room.messages.map(publicMessage),
       createdAt: room.createdAt,
       lastActivityAt: room.lastActivityAt,
@@ -145,8 +165,20 @@ class RoomManager {
     });
   }
 
-  markStarted(room) {
-    room.status = "started";
+  /**
+   * End the active match (e.g. a player disconnected mid-game).
+   * The room and remaining players are preserved, shared state is cleared,
+   * and the room returns to "waiting" so a new opponent can join.
+   * Roles are re-assigned on the next start_game.
+   */
+  endActiveMatch(room) {
+    room.status = "waiting";
+    room.gameState = null;
+    room.currentTurn = null;
+    room.round = 0;
+    for (const player of room.players) {
+      player.role = undefined;
+    }
     room.lastActivityAt = Date.now();
     return this.publicRoom(room);
   }
@@ -202,6 +234,7 @@ function publicPlayer(player) {
     name: player.name,
     playerNumber: player.playerNumber,
     isHost: Boolean(player.isHost),
+    role: player.role || null,
   };
 }
 
