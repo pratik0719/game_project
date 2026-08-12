@@ -69,7 +69,85 @@
   let gameOver = false;
   let thinking = false;
 
-  setup();
+  // ------------------------------------------------------------------
+  // Multiplayer integration. The full move engine lives on the server;
+  // the browser only sends { type: "move", from, to } intents and renders
+  // the shared board. (The client engine stays for single-player AI.)
+  // ------------------------------------------------------------------
+  const mpSupport = window.MultiplayerGameSupport ? window.MultiplayerGameSupport.create("chess", {
+    onStatus: onMpStatus,
+    onRoom: onMpRoom,
+    onMatchStart: onMpMatchStart,
+    onState: onMpState,
+    onGameOver: onMpGameOver,
+    onMatchEnded: onMpMatchEnded,
+  }) : null;
+  const MP_GAME = "chess";
+  const urlRoomCode = new URLSearchParams(window.location.search).get("room");
+  let mpWaiting = false;
+  let mpPlaying = false;
+  let mpResult = null;
+  let myColor = null;
+
+  function onMpStatus(status) {
+    if (status === "solo") exitMultiplayer();
+  }
+
+  function onMpRoom(room) {
+    if (!room) {
+      exitMultiplayer();
+      return;
+    }
+    if (room.gameId !== MP_GAME) return;
+    if (room.status === "playing" && room.gameState) enterMpMatch();
+    else enterMpWaiting();
+  }
+
+  function onMpMatchStart() {
+    enterMpMatch();
+  }
+
+  function onMpState(payload) {
+    if (!payload || payload.gameId !== MP_GAME) return;
+    if (payload.status && payload.status !== "playing") {
+      enterMpWaiting();
+      return;
+    }
+    if (!mpPlaying) enterMpMatch();
+    if (mpPlaying) renderMp();
+  }
+
+  function onMpGameOver(payload) {
+    if (!payload || payload.gameId !== MP_GAME) return;
+    mpResult = { winner: payload.winner ?? null, draw: Boolean(payload.draw), reason: payload.gameState?.reason || null };
+    renderMp();
+  }
+
+  function onMpMatchEnded() {
+    if (!mpWaiting && !mpPlaying) return;
+    const room = mpSupport ? mpSupport.getRoom() : null;
+    if (!room || room.gameId !== MP_GAME) exitMultiplayer();
+    else enterMpWaiting();
+  }
+
+  if (mpSupport) {
+    const initialRoom = mpSupport.getRoom();
+    if (urlRoomCode) {
+      enterMpWaiting();
+      window.setTimeout(() => {
+        const room = mpSupport ? mpSupport.getRoom() : null;
+        if (!room || room.gameId !== MP_GAME) exitMultiplayer();
+      }, 6000);
+    } else if (initialRoom && initialRoom.gameId === MP_GAME) {
+      if (initialRoom.status === "playing" && initialRoom.gameState) enterMpMatch();
+      else enterMpWaiting();
+    } else {
+      setup();
+    }
+  } else {
+    setup();
+  }
+
 
   restartBtn.addEventListener("click", setup);
   modesEl.addEventListener("click", (event) => {
@@ -119,7 +197,7 @@
           button.classList.add("target");
         }
 
-        button.disabled = gameOver || thinking;
+        button.disabled = gameOver || thinking || (mpPlaying && !(myColor && turn === myColor));
         button.addEventListener("click", onCellClick);
         boardEl.appendChild(button);
       }
@@ -136,6 +214,11 @@
   }
 
   function onCellClick(event) {
+    if (mpPlaying) {
+      onMpCellClick(event);
+      return;
+    }
+
     if (gameOver || thinking) {
       return;
     }
@@ -165,6 +248,43 @@
     if (piece && piece[0] === turn) {
       selected = { row, col };
       legalTargets = getLegalMovesForPiece(board, row, col, turn).map((move) => ({ row: move.toRow, col: move.toCol }));
+    } else {
+      selected = null;
+      legalTargets = [];
+    }
+
+    renderBoard();
+  }
+
+  function onMpCellClick(event) {
+    if (!mpPlaying || gameOver || !myColor) return;
+    if (turn !== myColor) {
+      statusEl.textContent = "Wait for your opponent.";
+      return;
+    }
+
+    const button = event.currentTarget;
+    const row = Number(button.dataset.row);
+    const col = Number(button.dataset.col);
+    const piece = board[row][col];
+
+    if (selected) {
+      const move = legalTargets.find((candidate) => candidate.row === row && candidate.col === col);
+      if (move) {
+        const origin = selected;
+        selected = null;
+        legalTargets = [];
+        renderBoard();
+        if (mpSupport) {
+          mpSupport.sendAction({ type: "move", from: { row: origin.row, col: origin.col }, to: { row, col } });
+        }
+        return;
+      }
+    }
+
+    if (piece && piece[0] === myColor) {
+      selected = { row, col };
+      legalTargets = getLegalMovesForPiece(board, row, col, myColor).map((move) => ({ row: move.toRow, col: move.toCol }));
     } else {
       selected = null;
       legalTargets = [];
@@ -234,6 +354,7 @@
   }
 
   function finishGame(endState, movedPiece) {
+    if (mpPlaying) return; // the server owns the multiplayer result
     gameOver = true;
 
     let resultText = "Game over.";
@@ -566,5 +687,102 @@
       ["wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"],
       ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"],
     ];
+  }
+
+  // ---------- Multiplayer mode ----------
+
+  function enterMpWaiting() {
+    mpWaiting = true;
+    mpPlaying = false;
+    mpResult = null;
+    myColor = null;
+    modesEl.hidden = true;
+    restartBtn.hidden = true;
+    statusEl.textContent = "In a multiplayer room. Waiting for the host to start the match...";
+    renderMpControls();
+    boardEl.innerHTML = '<p class="mp-muted">Waiting for the host to start the match...</p>';
+  }
+
+  function enterMpMatch() {
+    if (!mpSupport) return;
+    const room = mpSupport.getRoom();
+    if (!room || room.gameId !== MP_GAME) return;
+    mpWaiting = false;
+    mpPlaying = true;
+    mpResult = null;
+    myColor = mpSupport.myRole === "White" ? "w" : mpSupport.myRole === "Black" ? "b" : null;
+    modesEl.hidden = true;
+    restartBtn.hidden = true;
+    renderMpControls();
+    renderMp();
+  }
+
+  function renderMp() {
+    const state = mpSupport ? mpSupport.getGameState() : null;
+    if (!state || !state.board) {
+      boardEl.innerHTML = '<p class="mp-muted">Waiting for match state...</p>';
+      return;
+    }
+
+    board = state.board;
+    turn = state.turn;
+    history = state.history || [];
+    gameOver = Boolean(state.finished);
+    selected = null;
+    legalTargets = [];
+
+    renderHistory();
+    renderBoard();
+
+    const players = mpSupport ? mpSupport.getPlayers() : [];
+    const roleName = myColor === "w" ? "White" : "Black";
+
+    if (mpResult) {
+      const winnerName = (winnerColor) => {
+        const player = players.find((entry) => entry.role === winnerColor);
+        return player ? player.name : winnerColor;
+      };
+      if (mpResult.draw) {
+        statusEl.textContent = `Match over - ${mpResult.reason || "Draw"}.`;
+      } else if (mpResult.winner === roleName) {
+        statusEl.textContent = `You win! (${mpResult.reason || "Checkmate"})`;
+      } else {
+        statusEl.textContent = `Match over - ${winnerName(mpResult.winner)} wins! (${mpResult.reason || "Checkmate"})`;
+      }
+    } else if (gameOver) {
+      statusEl.textContent = "Match over.";
+    } else if (turn === myColor) {
+      statusEl.textContent = "Your move.";
+    } else {
+      const opponent = players.find((entry) => entry.role === (myColor === "w" ? "Black" : "White"));
+      statusEl.textContent = opponent ? `${opponent.name} is thinking...` : "Opponent is thinking...";
+    }
+
+    renderMpControls();
+  }
+
+  function renderMpControls() {
+    controls.querySelector(".mp-match-bar")?.remove();
+    controls.querySelector(".mp-play-again")?.remove();
+    const bar = document.createElement("div");
+    bar.className = "mp-match-bar";
+    controls.appendChild(bar);
+    if (mpSupport) mpSupport.renderMatchBar(bar);
+    if (mpSupport) mpSupport.renderPlayAgainButton(controls, mpPlaying && Boolean(mpResult));
+  }
+
+  function exitMultiplayer() {
+    if (!mpWaiting && !mpPlaying) return;
+    mpWaiting = false;
+    mpPlaying = false;
+    mpResult = null;
+    myColor = null;
+    modesEl.hidden = false;
+    restartBtn.hidden = false;
+    const bar = controls.querySelector(".mp-match-bar");
+    if (bar) bar.remove();
+    const again = controls.querySelector(".mp-play-again");
+    if (again) again.remove();
+    setup();
   }
 })();

@@ -72,7 +72,84 @@
   let canRoll = true;
   let gameOver = false;
 
-  initialize();
+  // ------------------------------------------------------------------
+  // Multiplayer integration. The server owns the dice and every token;
+  // the browser only sends "roll" and "move" intents and renders the
+  // shared board state. Bots are disabled - humans only.
+  // ------------------------------------------------------------------
+  const mpSupport = window.MultiplayerGameSupport ? window.MultiplayerGameSupport.create("ludo", {
+    onStatus: onMpStatus,
+    onRoom: onMpRoom,
+    onMatchStart: onMpMatchStart,
+    onState: onMpState,
+    onGameOver: onMpGameOver,
+    onMatchEnded: onMpMatchEnded,
+  }) : null;
+  const MP_GAME = "ludo";
+  const urlRoomCode = new URLSearchParams(window.location.search).get("room");
+  let mpWaiting = false;
+  let mpPlaying = false;
+  let mpResult = null;
+
+  function onMpStatus(status) {
+    if (status === "solo") exitMultiplayer();
+  }
+
+  function onMpRoom(room) {
+    if (!room) {
+      exitMultiplayer();
+      return;
+    }
+    if (room.gameId !== MP_GAME) return;
+    if (room.status === "playing" && room.gameState) enterMpMatch();
+    else enterMpWaiting();
+  }
+
+  function onMpMatchStart() {
+    enterMpMatch();
+  }
+
+  function onMpState(payload) {
+    if (!payload || payload.gameId !== MP_GAME) return;
+    if (payload.status && payload.status !== "playing") {
+      enterMpWaiting();
+      return;
+    }
+    if (!mpPlaying) enterMpMatch();
+    if (mpPlaying) renderMp();
+  }
+
+  function onMpGameOver(payload) {
+    if (!payload || payload.gameId !== MP_GAME) return;
+    mpResult = { winner: payload.winner ?? null, draw: Boolean(payload.draw) };
+    renderMp();
+  }
+
+  function onMpMatchEnded() {
+    if (!mpWaiting && !mpPlaying) return;
+    const room = mpSupport ? mpSupport.getRoom() : null;
+    if (!room || room.gameId !== MP_GAME) exitMultiplayer();
+    else enterMpWaiting();
+  }
+
+  if (mpSupport) {
+    const initialRoom = mpSupport.getRoom();
+    if (urlRoomCode) {
+      enterMpWaiting();
+      window.setTimeout(() => {
+        const room = mpSupport ? mpSupport.getRoom() : null;
+        if (!room || room.gameId !== MP_GAME) exitMultiplayer();
+      }, 6000);
+    } else if (initialRoom && initialRoom.gameId === MP_GAME) {
+      if (initialRoom.status === "playing" && initialRoom.gameState) enterMpMatch();
+      else enterMpWaiting();
+    } else {
+      initialize();
+    }
+  } else {
+    initialize();
+  }
+
 
   rollBtn.addEventListener("click", onRollDice);
   restartBtn.addEventListener("click", initialize);
@@ -199,6 +276,11 @@
       return;
     }
 
+    // In multiplayer, only the player whose turn it is may move tokens.
+    if (mpPlaying && currentPlayer !== mpMyIndex()) {
+      return;
+    }
+
     const moves = validMovesForPlayer(player, dice);
     if (moves.length === 0) {
       tokenList.innerHTML = "<span>No valid token for this roll.</span>";
@@ -210,6 +292,10 @@
       button.className = "ludo-token-btn active";
       button.textContent = `Token ${tokenIndex + 1}`;
       button.addEventListener("click", () => {
+        if (mpPlaying) {
+          if (mpSupport) mpSupport.sendAction({ type: "move", tokenIndex });
+          return;
+        }
         applyMove(player, tokenIndex, dice);
       });
       tokenList.appendChild(button);
@@ -218,6 +304,11 @@
 
   function onRollDice() {
     if (!canRoll || gameOver) {
+      return;
+    }
+
+    if (mpPlaying) {
+      if (currentPlayer === mpMyIndex() && mpSupport) mpSupport.sendAction({ type: "roll" });
       return;
     }
 
@@ -513,5 +604,114 @@
         { x: 168, y: 548 },
       ],
     ];
+  }
+
+  // ---------- Multiplayer mode ----------
+
+  function mpMyIndex() {
+    const myNumber = mpSupport ? mpSupport.myPlayerNumber() : null;
+    return players.findIndex((player) => player.playerNumber === myNumber);
+  }
+
+  function enterMpWaiting() {
+    mpWaiting = true;
+    mpPlaying = false;
+    mpResult = null;
+    rollBtn.disabled = true;
+    tokenList.innerHTML = "";
+    statusEl.textContent = "In a multiplayer room. Waiting for the host to start the match...";
+    renderMpControls();
+    ctx.fillStyle = "#06101f";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(144, 166, 195, 0.6)";
+    ctx.font = "16px Orbitron";
+    ctx.textAlign = "center";
+    ctx.fillText("Waiting for the host...", canvas.width / 2, canvas.height / 2);
+    ctx.textAlign = "start";
+  }
+
+  function enterMpMatch() {
+    if (!mpSupport) return;
+    const room = mpSupport.getRoom();
+    if (!room || room.gameId !== MP_GAME) return;
+    mpWaiting = false;
+    mpPlaying = true;
+    mpResult = null;
+    statusEl.textContent = "Race your tokens home!";
+    renderMpControls();
+    renderMp();
+  }
+
+  function applyMpState() {
+    const state = mpSupport ? mpSupport.getGameState() : null;
+    if (!state || !Array.isArray(state.players)) return false;
+
+    const roomPlayers = mpSupport ? mpSupport.getPlayers() : [];
+    players = state.players.map((entry, idx) => {
+      const paletteEntry = playerPalette[idx] || { name: `Player ${idx + 1}`, color: "#ffffff" };
+      const roomPlayer = roomPlayers.find((p) => p.playerNumber === entry.playerNumber);
+      return {
+        index: idx,
+        playerNumber: entry.playerNumber,
+        name: roomPlayer ? roomPlayer.name : paletteEntry.name,
+        color: paletteEntry.color,
+        tokens: entry.tokens,
+        captures: entry.captures,
+        isBot: false,
+      };
+    });
+    currentPlayer = Math.min(state.currentPlayerIndex, Math.max(0, players.length - 1));
+    dice = state.dice;
+    canRoll = Boolean(state.canRoll);
+    gameOver = Boolean(state.finished);
+    return true;
+  }
+
+  function renderMp() {
+    if (!applyMpState()) return;
+    render();
+
+    // Enforce the turn gate locally so only the acting player can roll.
+    rollBtn.disabled = !canRoll || gameOver || currentPlayer !== mpMyIndex();
+
+    const playersList = mpSupport ? mpSupport.getPlayers() : [];
+    if (mpResult) {
+      const winnerName = (pn) => {
+        const player = playersList.find((entry) => entry.playerNumber === pn);
+        return player ? player.name : `Player ${pn}`;
+      };
+      const myNumber = mpSupport ? mpSupport.myPlayerNumber() : null;
+      if (mpResult.draw) statusEl.textContent = "Match over - it is a draw!";
+      else if (mpResult.winner === myNumber) statusEl.textContent = "You win!";
+      else statusEl.textContent = `Match over - ${winnerName(mpResult.winner)} wins!`;
+    } else if (currentPlayer === mpMyIndex()) {
+      statusEl.textContent = dice === null ? "Your turn. Roll the dice." : `You rolled ${dice}. Move a token.`;
+    } else {
+      statusEl.textContent = `${players[currentPlayer] ? players[currentPlayer].name : "Opponent"} is playing...`;
+    }
+
+    renderMpControls();
+  }
+
+  function renderMpControls() {
+    controls.querySelector(".mp-match-bar")?.remove();
+    controls.querySelector(".mp-play-again")?.remove();
+    const bar = document.createElement("div");
+    bar.className = "mp-match-bar";
+    controls.appendChild(bar);
+    if (mpSupport) mpSupport.renderMatchBar(bar);
+    if (mpSupport) mpSupport.renderPlayAgainButton(controls, mpPlaying && Boolean(mpResult));
+  }
+
+  function exitMultiplayer() {
+    if (!mpWaiting && !mpPlaying) return;
+    mpWaiting = false;
+    mpPlaying = false;
+    mpResult = null;
+    const bar = controls.querySelector(".mp-match-bar");
+    if (bar) bar.remove();
+    const again = controls.querySelector(".mp-play-again");
+    if (again) again.remove();
+    initialize();
   }
 })();

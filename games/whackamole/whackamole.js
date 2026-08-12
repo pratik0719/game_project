@@ -27,10 +27,10 @@
 
   levels = levels
     .map((level) => {
-      const attrs = level && level["@attributes"] ? level["@attributes"] : {};
+      const attrs = (level && (level["@attributes"] || level)) || {};
       return {
-        second: Number(attrs.second || 0),
-        interval: Number(attrs.interval || 800),
+        second: Number(attrs["@_second"] || attrs.second || 0),
+        interval: Number(attrs["@_interval"] || attrs.interval || 800),
       };
     })
     .sort((a, b) => a.second - b.second);
@@ -67,8 +67,82 @@
   let popupTimer = null;
   let activeHole = -1;
 
+  // ------------------------------------------------------------------
+  // Multiplayer integration. All players share ONE grid; the server
+  // decides when/where moles pop and who whacks them first. The browser
+  // only sends "whack" intents.
+  // ------------------------------------------------------------------
+  const mpSupport = window.MultiplayerGameSupport ? window.MultiplayerGameSupport.create("whackamole", {
+    onStatus: onMpStatus,
+    onRoom: onMpRoom,
+    onMatchStart: onMpMatchStart,
+    onState: onMpState,
+    onGameOver: onMpGameOver,
+    onMatchEnded: onMpMatchEnded,
+  }) : null;
+  const MP_GAME = "whackamole";
+  const urlRoomCode = new URLSearchParams(window.location.search).get("room");
+  let mpWaiting = false;
+  let mpPlaying = false;
+  let mpResult = null;
+
+  function onMpStatus(status) {
+    if (status === "solo") exitMultiplayer();
+  }
+
+  function onMpRoom(room) {
+    if (!room) {
+      exitMultiplayer();
+      return;
+    }
+    if (room.gameId !== MP_GAME) return;
+    if (room.status === "playing" && room.gameState) enterMpMatch();
+    else enterMpWaiting();
+  }
+
+  function onMpMatchStart() {
+    enterMpMatch();
+  }
+
+  function onMpState(payload) {
+    if (!payload || payload.gameId !== MP_GAME) return;
+    if (payload.status && payload.status !== "playing") {
+      enterMpWaiting();
+      return;
+    }
+    if (!mpPlaying) enterMpMatch();
+    if (mpPlaying) renderMp();
+  }
+
+  function onMpGameOver(payload) {
+    if (!payload || payload.gameId !== MP_GAME) return;
+    mpResult = { winner: payload.winner ?? null, draw: Boolean(payload.draw) };
+    renderMp();
+  }
+
+  function onMpMatchEnded() {
+    if (!mpWaiting && !mpPlaying) return;
+    const room = mpSupport ? mpSupport.getRoom() : null;
+    if (!room || room.gameId !== MP_GAME) exitMultiplayer();
+    else enterMpWaiting();
+  }
+
+  if (mpSupport) {
+    const initialRoom = mpSupport.getRoom();
+    if (urlRoomCode) {
+      enterMpWaiting();
+      window.setTimeout(() => {
+        const room = mpSupport ? mpSupport.getRoom() : null;
+        if (!room || room.gameId !== MP_GAME) exitMultiplayer();
+      }, 6000);
+    } else if (initialRoom && initialRoom.gameId === MP_GAME) {
+      if (initialRoom.status === "playing" && initialRoom.gameState) enterMpMatch();
+      else enterMpWaiting();
+    }
+  }
+
   buildHoles();
-  statusEl.textContent = "Tap Start to begin whacking moles.";
+  if (!mpWaiting && !mpPlaying) statusEl.textContent = "Tap Start to begin whacking moles.";
 
   startBtn.addEventListener("click", startGame);
   resetBtn.addEventListener("click", resetGame);
@@ -189,6 +263,11 @@
   }
 
   function onHoleClick(index) {
+    if (mpPlaying) {
+      if (mpSupport && !mpResult) mpSupport.sendAction({ type: "whack", index });
+      return;
+    }
+
     if (!running || index !== activeHole) {
       return;
     }
@@ -212,5 +291,97 @@
       window.clearTimeout(popupTimer);
       popupTimer = null;
     }
+  }
+
+  // ---------- Multiplayer mode ----------
+
+  function enterMpWaiting() {
+    mpWaiting = true;
+    mpPlaying = false;
+    mpResult = null;
+    clearTimers();
+    startBtn.hidden = true;
+    resetBtn.hidden = true;
+    statusEl.textContent = "In a multiplayer room. Waiting for the host to start the match...";
+    clearMpMoles();
+    renderMpControls();
+  }
+
+  function enterMpMatch() {
+    if (!mpSupport) return;
+    const room = mpSupport.getRoom();
+    if (!room || room.gameId !== MP_GAME) return;
+    mpWaiting = false;
+    mpPlaying = true;
+    mpResult = null;
+    startBtn.hidden = true;
+    resetBtn.hidden = true;
+    statusEl.textContent = "Whack moles before the opponent does!";
+    renderMpControls();
+    renderMp();
+  }
+
+  function clearMpMoles() {
+    Array.from(grid.children).forEach((hole) => hole.classList.remove("active"));
+  }
+
+  function renderMp() {
+    const state = mpSupport ? mpSupport.getGameState() : null;
+    if (!state) return;
+
+    clearMpMoles();
+    if (state.activeHole >= 0 && state.activeHole < grid.children.length) {
+      grid.children[state.activeHole].classList.add("active");
+    }
+
+    const myNumber = mpSupport ? mpSupport.myPlayerNumber() : null;
+    const myScore = state.scores ? state.scores[myNumber] : 0;
+    scoreEl.textContent = String(myScore || 0);
+    const remainingSeconds = Math.max(0, Math.ceil((state.durationMs - state.elapsedMs) / 1000));
+    timeEl.textContent = String(remainingSeconds);
+
+    const players = mpSupport ? mpSupport.getPlayers() : [];
+    const lines = players.map((player) => {
+      const value = state.scores ? state.scores[player.playerNumber] : 0;
+      return `${player.name}: ${value}`;
+    });
+
+    if (mpResult) {
+      const winnerName = (pn) => {
+        const player = players.find((entry) => entry.playerNumber === pn);
+        return player ? player.name : `Player ${pn}`;
+      };
+      if (mpResult.draw) statusEl.textContent = "Match over - it is a draw!";
+      else if (mpResult.winner === myNumber) statusEl.textContent = "You win!";
+      else statusEl.textContent = `Match over - ${winnerName(mpResult.winner)} wins!`;
+    } else {
+      statusEl.textContent = lines.join("  |  ");
+    }
+
+    renderMpControls();
+  }
+
+  function renderMpControls() {
+    controls.querySelector(".mp-match-bar")?.remove();
+    controls.querySelector(".mp-play-again")?.remove();
+    const bar = document.createElement("div");
+    bar.className = "mp-match-bar";
+    controls.appendChild(bar);
+    if (mpSupport) mpSupport.renderMatchBar(bar);
+    if (mpSupport) mpSupport.renderPlayAgainButton(controls, mpPlaying && Boolean(mpResult));
+  }
+
+  function exitMultiplayer() {
+    if (!mpWaiting && !mpPlaying) return;
+    mpWaiting = false;
+    mpPlaying = false;
+    mpResult = null;
+    startBtn.hidden = false;
+    resetBtn.hidden = false;
+    const bar = controls.querySelector(".mp-match-bar");
+    if (bar) bar.remove();
+    const again = controls.querySelector(".mp-play-again");
+    if (again) again.remove();
+    resetGame();
   }
 })();

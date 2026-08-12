@@ -9,9 +9,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <link rel="stylesheet" href="/static/css/multiplayer.css" />
+  <link rel="stylesheet" href="/static/css/room-chat.css" />
   <script defer src="/static/js/main.js"></script>
   <script defer src="/socket.io/socket.io.js"></script>
+  <script defer src="/static/js/room-chat.js"></script>
   <script defer src="/static/js/multiplayer.js"></script>
+  <script defer src="/static/js/mp-game.js"></script>
   <script defer src="/games/<%= encodeURIComponent(gameName) %>/<%= encodeURIComponent(gameScript) %>"></script>
 </head>
 <body class="page-game" data-page="game" data-game="<%= gameName %>" style="--accent: <%= accent %>;">
@@ -50,6 +53,7 @@
           <input id="mp-game-select" type="hidden" value="<%= gameName %>" />
           <label>Create room</label>
           <button id="mp-create-room-btn" class="btn btn-primary" type="submit" <%= gameMultiplayerReady ? "" : "disabled" %>>Create Room</button>
+          <button id="mp-open-picker" class="btn btn-outline" type="button">Change Game</button>
           <p id="mp-create-note" class="mp-muted" <%= gameMultiplayerReady ? "hidden" : "" %>>Multiplayer for this game is coming soon. You can still join any room from here.</p>
         </form>
 
@@ -63,38 +67,30 @@
         </form>
       </div>
 
-      <div id="mp-lobby" class="mp-lobby hidden" aria-live="polite">
-        <div class="mp-lobby-main">
+    </section>
+
+    <section id="mp-room-view" class="mp-room-view hidden" aria-live="polite">
+      <div class="mp-room-bar card-surface">
+        <div class="mp-room-bar-info">
+          <span id="mp-rv-icon" class="mp-lobby-icon" aria-hidden="true">🎮</span>
           <div>
-            <span class="category-chip">Room <span id="mp-lobby-code"></span></span>
-            <h3 id="mp-lobby-game">Selected game</h3>
-            <p id="mp-lobby-status" class="mp-muted">Waiting for players</p>
+            <p class="eyebrow">ROOM <span id="mp-rv-code"></span></p>
+            <h3 id="mp-rv-game-name">Multiplayer room</h3>
+            <p id="mp-rv-status" class="mp-muted">Waiting for players</p>
           </div>
-          <div class="mp-code-box" aria-label="Current room code">
-            <span>Room Code</span>
-            <strong id="mp-lobby-code-display"></strong>
-          </div>
-          <div class="mp-actions">
-            <button id="mp-copy-code" class="btn btn-outline" type="button">Copy Code</button>
-            <button id="mp-copy-link" class="btn btn-outline" type="button">Copy Invite Link</button>
-            <button id="mp-start-game" class="btn btn-primary" type="button">Start Game</button>
-            <button id="mp-leave-room" class="btn btn-outline" type="button">Leave Room</button>
-          </div>
+          <span id="mp-rv-connection" class="mp-status">Connecting...</span>
         </div>
-        <div class="mp-room-body">
-          <div>
-            <h4>Players</h4>
-            <ul id="mp-player-list" class="mp-player-list"></ul>
-          </div>
-          <form id="mp-chat-form" class="mp-chat">
-            <h4>Live Chat</h4>
-            <div id="mp-chat-log" class="mp-chat-log" aria-live="polite"></div>
-            <div class="mp-inline">
-              <input id="mp-chat-input" type="text" maxlength="300" placeholder="Message the room" />
-              <button class="btn btn-primary" type="submit">Send</button>
-            </div>
-          </form>
+        <div class="mp-actions">
+          <button id="mp-copy-code" class="btn btn-outline" type="button">Copy Code</button>
+          <button id="mp-copy-link" class="btn btn-outline" type="button">Copy Invite Link</button>
+          <button id="mp-start-game" class="btn btn-primary" type="button" disabled>Start Game</button>
+          <button id="mp-leave-room" class="btn btn-outline" type="button">Leave Room</button>
         </div>
+      </div>
+      <div class="mp-room-players">
+        <span class="mp-chip-label">Players</span>
+        <ul id="mp-player-list" class="mp-player-chips"></ul>
+        <span id="mp-room-count" class="mp-chip">0 connected</span>
       </div>
     </section>
 
@@ -106,6 +102,8 @@
       <div id="game-root" class="game-root"></div>
       <div id="game-controls" class="game-controls"></div>
     </section>
+
+    <div id="mp-chat-mount" class="mp-chat-mount"></div>
   </main>
 
   <section id="score-modal" class="modal hidden" aria-hidden="true">

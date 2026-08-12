@@ -57,8 +57,89 @@
   let rightPressed = false;
   let leftPressed = false;
 
-  startState();
-  draw();
+  // ------------------------------------------------------------------
+  // Multiplayer integration. Each player gets their own server-simulated
+  // field; the browser reports the desired paddle position and renders
+  // both fields from the shared state.
+  // ------------------------------------------------------------------
+  const mpSupport = window.MultiplayerGameSupport ? window.MultiplayerGameSupport.create("breakout", {
+    onStatus: onMpStatus,
+    onRoom: onMpRoom,
+    onMatchStart: onMpMatchStart,
+    onState: onMpState,
+    onGameOver: onMpGameOver,
+    onMatchEnded: onMpMatchEnded,
+  }) : null;
+  const MP_GAME = "breakout";
+  const urlRoomCode = new URLSearchParams(window.location.search).get("room");
+  let mpWaiting = false;
+  let mpPlaying = false;
+  let mpResult = null;
+  let mpTargetX = canvas.width / 2;
+  let mpLastPaddleSend = 0;
+  const OPPONENT_PALETTE = { paddle: "#f472b6", ball: "#fb7185" };
+
+  function onMpStatus(status) {
+    if (status === "solo") exitMultiplayer();
+  }
+
+  function onMpRoom(room) {
+    if (!room) {
+      exitMultiplayer();
+      return;
+    }
+    if (room.gameId !== MP_GAME) return;
+    if (room.status === "playing" && room.gameState) enterMpMatch();
+    else enterMpWaiting();
+  }
+
+  function onMpMatchStart() {
+    enterMpMatch();
+  }
+
+  function onMpState(payload) {
+    if (!payload || payload.gameId !== MP_GAME) return;
+    if (payload.status && payload.status !== "playing") {
+      enterMpWaiting();
+      return;
+    }
+    if (!mpPlaying) enterMpMatch();
+    if (mpPlaying) renderMp();
+  }
+
+  function onMpGameOver(payload) {
+    if (!payload || payload.gameId !== MP_GAME) return;
+    mpResult = { winner: payload.winner ?? null, draw: Boolean(payload.draw) };
+    renderMp();
+  }
+
+  function onMpMatchEnded() {
+    if (!mpWaiting && !mpPlaying) return;
+    const room = mpSupport ? mpSupport.getRoom() : null;
+    if (!room || room.gameId !== MP_GAME) exitMultiplayer();
+    else enterMpWaiting();
+  }
+
+  if (mpSupport) {
+    const initialRoom = mpSupport.getRoom();
+    if (urlRoomCode) {
+      enterMpWaiting();
+      window.setTimeout(() => {
+        const room = mpSupport ? mpSupport.getRoom() : null;
+        if (!room || room.gameId !== MP_GAME) exitMultiplayer();
+      }, 6000);
+    } else if (initialRoom && initialRoom.gameId === MP_GAME) {
+      if (initialRoom.status === "playing" && initialRoom.gameState) enterMpMatch();
+      else enterMpWaiting();
+    } else {
+      startState();
+      draw();
+    }
+  } else {
+    startState();
+    draw();
+  }
+
 
   startBtn.addEventListener("click", () => {
     if (!running) {
@@ -76,6 +157,17 @@
   });
 
   window.addEventListener("keydown", (event) => {
+    if (mpPlaying) {
+      if (event.key === "ArrowRight") {
+        mpTargetX = Math.min(canvas.width, mpTargetX + 24);
+        sendMpPaddle();
+      }
+      if (event.key === "ArrowLeft") {
+        mpTargetX = Math.max(0, mpTargetX - 24);
+        sendMpPaddle();
+      }
+      return;
+    }
     if (event.key === "ArrowRight") {
       rightPressed = true;
     }
@@ -96,6 +188,11 @@
   canvas.addEventListener("mousemove", (event) => {
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
+    if (mpPlaying) {
+      mpTargetX = Math.max(0, Math.min(canvas.width, x));
+      sendMpPaddle();
+      return;
+    }
     paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, x - paddle.width / 2));
   });
 
@@ -269,6 +366,152 @@
       ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
       ctx.strokeRect(brick.x, brick.y, brick.w, brick.h);
     });
+  }
+
+  // ---------- Multiplayer mode ----------
+
+  function sendMpPaddle() {
+    const now = performance.now();
+    if (now - mpLastPaddleSend < 50) return;
+    mpLastPaddleSend = now;
+    if (mpSupport && mpPlaying && !mpResult) {
+      mpSupport.sendAction({ type: "paddle", x: mpTargetX });
+    }
+  }
+
+  function enterMpWaiting() {
+    mpWaiting = true;
+    mpPlaying = false;
+    mpResult = null;
+    stop();
+    startBtn.hidden = true;
+    resetBtn.hidden = true;
+    scoreEl.textContent = "0";
+    livesEl.textContent = "-";
+    levelEl.textContent = "-";
+    statusEl.textContent = "In a multiplayer room. Waiting for the host to start the match...";
+    drawMpWaiting();
+    renderMpControls();
+  }
+
+  function enterMpMatch() {
+    if (!mpSupport) return;
+    const room = mpSupport.getRoom();
+    if (!room || room.gameId !== MP_GAME) return;
+    mpWaiting = false;
+    mpPlaying = true;
+    mpResult = null;
+    startBtn.hidden = true;
+    resetBtn.hidden = true;
+    statusEl.textContent = "Break bricks and outlast the opponent!";
+    renderMpControls();
+    renderMp();
+  }
+
+  function drawMpWaiting() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#0a0f1f";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(144, 166, 195, 0.6)";
+    ctx.font = "16px Orbitron";
+    ctx.textAlign = "center";
+    ctx.fillText("Waiting for the host...", canvas.width / 2, canvas.height / 2);
+    ctx.textAlign = "start";
+  }
+
+  function renderMp() {
+    const state = mpSupport ? mpSupport.getGameState() : null;
+    if (!state || !state.playerStates) return;
+
+    const myNumber = mpSupport ? mpSupport.myPlayerNumber() : null;
+    const players = mpSupport ? mpSupport.getPlayers() : [];
+    const halfWidth = canvas.width / 2;
+    const scale = halfWidth / canvas.width;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    let index = 0;
+    Object.keys(state.playerStates).forEach((number) => {
+      const field = state.playerStates[number];
+      const isMe = Number(number) === myNumber;
+      const offsetX = index * halfWidth;
+      const player = players.find((entry) => entry.playerNumber === Number(number));
+      const label = isMe ? "You" : player ? player.name : "Opponent";
+      drawMpField(field, offsetX, halfWidth, scale, isMe, label, isMe ? "#6dd3ff" : OPPONENT_PALETTE.paddle, isMe ? "#f9a8d4" : OPPONENT_PALETTE.ball);
+      index += 1;
+    });
+
+    if (mpResult) {
+      const winnerName = (pn) => {
+        const player = players.find((entry) => entry.playerNumber === pn);
+        return player ? player.name : `Player ${pn}`;
+      };
+      if (mpResult.draw) statusEl.textContent = "Match over - it is a draw!";
+      else if (mpResult.winner === myNumber) statusEl.textContent = "You win!";
+      else statusEl.textContent = `Match over - ${winnerName(mpResult.winner)} wins!`;
+    }
+
+    renderMpControls();
+  }
+
+  function drawMpField(field, offsetX, width, scale, label, paddleColor, ballColor) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(offsetX, 0, width, canvas.height);
+    ctx.clip();
+
+    ctx.fillStyle = "#160824";
+    ctx.fillRect(offsetX, 0, width, canvas.height);
+
+    (field.bricks || []).forEach((brick) => {
+      if (brick.destroyed) return;
+      ctx.fillStyle = brick.color;
+      ctx.fillRect(offsetX + brick.x * scale, brick.y * scale, brick.w * scale, brick.h * scale);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+      ctx.strokeRect(offsetX + brick.x * scale, brick.y * scale, brick.w * scale, brick.h * scale);
+    });
+
+    ctx.fillStyle = paddleColor;
+    ctx.fillRect(offsetX + field.paddle.x * scale, field.paddle.y * scale, field.paddle.width * scale, field.paddle.height * scale);
+
+    ctx.beginPath();
+    ctx.arc(offsetX + field.ball.x * scale, field.ball.y * scale, field.ball.r * scale, 0, Math.PI * 2);
+    ctx.fillStyle = ballColor;
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(232, 242, 255, 0.85)";
+    ctx.font = "bold 12px Orbitron";
+    ctx.textAlign = "center";
+    ctx.fillText(`${label}  ${field.score}`, offsetX + width / 2, 16);
+    ctx.fillStyle = "#90a6c3";
+    ctx.font = "10px Orbitron";
+    ctx.fillText(`Lives: ${field.lives}  Level: ${field.level}`, offsetX + width / 2, 32);
+    ctx.restore();
+  }
+
+  function renderMpControls() {
+    controls.querySelector(".mp-match-bar")?.remove();
+    controls.querySelector(".mp-play-again")?.remove();
+    const bar = document.createElement("div");
+    bar.className = "mp-match-bar";
+    controls.appendChild(bar);
+    if (mpSupport) mpSupport.renderMatchBar(bar);
+    if (mpSupport) mpSupport.renderPlayAgainButton(controls, mpPlaying && Boolean(mpResult));
+  }
+
+  function exitMultiplayer() {
+    if (!mpWaiting && !mpPlaying) return;
+    mpWaiting = false;
+    mpPlaying = false;
+    mpResult = null;
+    startBtn.hidden = false;
+    resetBtn.hidden = false;
+    const bar = controls.querySelector(".mp-match-bar");
+    if (bar) bar.remove();
+    const again = controls.querySelector(".mp-play-again");
+    if (again) again.remove();
+    startState();
+    draw();
   }
 
   function createBricks(rCount, cCount) {

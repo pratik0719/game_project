@@ -55,8 +55,86 @@
   let started;
   let rafId;
 
-  resetState();
-  render();
+  // ------------------------------------------------------------------
+  // Multiplayer integration. All players fly through the SAME server-
+  // generated pipe field; the browser only sends "flap" intents and
+  // renders the shared state (both birds drawn on the same canvas).
+  // ------------------------------------------------------------------
+  const mpSupport = window.MultiplayerGameSupport ? window.MultiplayerGameSupport.create("flappy", {
+    onStatus: onMpStatus,
+    onRoom: onMpRoom,
+    onMatchStart: onMpMatchStart,
+    onState: onMpState,
+    onGameOver: onMpGameOver,
+    onMatchEnded: onMpMatchEnded,
+  }) : null;
+  const MP_GAME = "flappy";
+  const urlRoomCode = new URLSearchParams(window.location.search).get("room");
+  let mpWaiting = false;
+  let mpPlaying = false;
+  let mpResult = null;
+
+  function onMpStatus(status) {
+    if (status === "solo") exitMultiplayer();
+  }
+
+  function onMpRoom(room) {
+    if (!room) {
+      exitMultiplayer();
+      return;
+    }
+    if (room.gameId !== MP_GAME) return;
+    if (room.status === "playing" && room.gameState) enterMpMatch();
+    else enterMpWaiting();
+  }
+
+  function onMpMatchStart() {
+    enterMpMatch();
+  }
+
+  function onMpState(payload) {
+    if (!payload || payload.gameId !== MP_GAME) return;
+    if (payload.status && payload.status !== "playing") {
+      enterMpWaiting();
+      return;
+    }
+    if (!mpPlaying) enterMpMatch();
+    if (mpPlaying) renderMp();
+  }
+
+  function onMpGameOver(payload) {
+    if (!payload || payload.gameId !== MP_GAME) return;
+    mpResult = { winner: payload.winner ?? null, draw: Boolean(payload.draw) };
+    renderMp();
+  }
+
+  function onMpMatchEnded() {
+    if (!mpWaiting && !mpPlaying) return;
+    const room = mpSupport ? mpSupport.getRoom() : null;
+    if (!room || room.gameId !== MP_GAME) exitMultiplayer();
+    else enterMpWaiting();
+  }
+
+  if (mpSupport) {
+    const initialRoom = mpSupport.getRoom();
+    if (urlRoomCode) {
+      enterMpWaiting();
+      window.setTimeout(() => {
+        const room = mpSupport ? mpSupport.getRoom() : null;
+        if (!room || room.gameId !== MP_GAME) exitMultiplayer();
+      }, 6000);
+    } else if (initialRoom && initialRoom.gameId === MP_GAME) {
+      if (initialRoom.status === "playing" && initialRoom.gameState) enterMpMatch();
+      else enterMpWaiting();
+    } else {
+      resetState();
+      render();
+    }
+  } else {
+    resetState();
+    render();
+  }
+
 
   startBtn.addEventListener("click", () => {
     if (!running) {
@@ -79,7 +157,7 @@
     if (event.code === "Space") {
       event.preventDefault();
       flap();
-      if (!running) {
+      if (!running && !mpPlaying) {
         running = true;
         started = true;
         loop();
@@ -119,6 +197,10 @@
   }
 
   function flap() {
+    if (mpPlaying) {
+      if (mpSupport && !mpResult) mpSupport.sendAction({ type: "flap" });
+      return;
+    }
     if (!started) {
       return;
     }
@@ -220,5 +302,126 @@
     ctx.fillStyle = "#0f1f34";
     ctx.font = "bold 24px Orbitron";
     ctx.fillText(String(score), 12, 32);
+  }
+
+  // ---------- Multiplayer mode ----------
+
+  function enterMpWaiting() {
+    mpWaiting = true;
+    mpPlaying = false;
+    mpResult = null;
+    stop();
+    startBtn.hidden = true;
+    resetBtn.hidden = true;
+    scoreEl.textContent = "0";
+    statusEl.textContent = "In a multiplayer room. Waiting for the host to start the match...";
+    renderMpWaitingCanvas();
+    renderMpControls();
+  }
+
+  function enterMpMatch() {
+    if (!mpSupport) return;
+    const room = mpSupport.getRoom();
+    if (!room || room.gameId !== MP_GAME) return;
+    mpWaiting = false;
+    mpPlaying = true;
+    mpResult = null;
+    startBtn.hidden = true;
+    resetBtn.hidden = true;
+    statusEl.textContent = "Flap! First to crash loses.";
+    renderMpControls();
+    renderMp();
+  }
+
+  function renderMpWaitingCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#0d2446";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(144, 166, 195, 0.6)";
+    ctx.font = "16px Orbitron";
+    ctx.textAlign = "center";
+    ctx.fillText("Waiting for the host...", canvas.width / 2, canvas.height / 2);
+    ctx.textAlign = "start";
+  }
+
+  function renderMp() {
+    const state = mpSupport ? mpSupport.getGameState() : null;
+    if (!state) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, "#0d2446");
+    gradient.addColorStop(1, "#081222");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    (state.pipes || []).forEach((pipe) => {
+      ctx.fillStyle = "#34d399";
+      ctx.fillRect(pipe.x, 0, pipeWidth, pipe.gapY - pipeGap / 2);
+      ctx.fillRect(pipe.x, pipe.gapY + pipeGap / 2, pipeWidth, canvas.height - (pipe.gapY + pipeGap / 2));
+    });
+
+    const myNumber = mpSupport ? mpSupport.myPlayerNumber() : null;
+    const players = mpSupport ? mpSupport.getPlayers() : [];
+    Object.keys(state.playerStates || {}).forEach((number) => {
+      const entry = state.playerStates[number];
+      const isMe = Number(number) === myNumber;
+      const color = isMe ? birdColor : "#ff6b6b";
+      drawMpBird(entry.bird, color);
+
+      const player = players.find((entry2) => entry2.playerNumber === Number(number));
+      const label = isMe ? "You" : player ? player.name : "Opponent";
+      ctx.fillStyle = isMe ? birdColor : "#ff9aac";
+      ctx.font = "bold 13px Orbitron";
+      ctx.fillText(`${label} ${entry.score}`, 12, isMe ? 30 : 50);
+    });
+
+    if (mpResult) {
+      const winnerName = (pn) => {
+        const player = players.find((entry2) => entry2.playerNumber === pn);
+        return player ? player.name : `Player ${pn}`;
+      };
+      if (mpResult.draw) statusEl.textContent = "Match over - it is a draw!";
+      else if (mpResult.winner === myNumber) statusEl.textContent = "You win!";
+      else statusEl.textContent = `Match over - ${winnerName(mpResult.winner)} wins!`;
+    }
+
+    renderMpControls();
+  }
+
+  function drawMpBird(birdState, color) {
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.arc(birdState.x, birdState.y, birdState.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.fillStyle = "#f8fbff";
+    ctx.arc(birdState.x + 5, birdState.y - 5, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function renderMpControls() {
+    controls.querySelector(".mp-match-bar")?.remove();
+    controls.querySelector(".mp-play-again")?.remove();
+    const bar = document.createElement("div");
+    bar.className = "mp-match-bar";
+    controls.appendChild(bar);
+    if (mpSupport) mpSupport.renderMatchBar(bar);
+    if (mpSupport) mpSupport.renderPlayAgainButton(controls, mpPlaying && Boolean(mpResult));
+  }
+
+  function exitMultiplayer() {
+    if (!mpWaiting && !mpPlaying) return;
+    mpWaiting = false;
+    mpPlaying = false;
+    mpResult = null;
+    startBtn.hidden = false;
+    resetBtn.hidden = false;
+    const bar = controls.querySelector(".mp-match-bar");
+    if (bar) bar.remove();
+    const again = controls.querySelector(".mp-play-again");
+    if (again) again.remove();
+    resetState();
+    render();
   }
 })();

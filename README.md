@@ -191,15 +191,22 @@ const config = parser.parse(xmlText);
 
 ### Socket.IO events
 Client to server:
-`create_room`, `join_room`, `leave_room`, `start_game`, `game_action`, `play_again`, `send_message`, `request_room_state`
+`create_room`, `join_room`, `reconnect_room`, `leave_room`, `start_game`, `game_action`, `play_again`, `request_room_state`, `send_room_message`, `request_chat_history`, `chat_typing_start`, `chat_typing_stop`
 
 Server to client:
-`room_created`, `room_joined`, `room_state`, `player_joined`, `player_left`, `host_changed`, `game_started`, `game_state`, `game_over`, `match_ended`, `chat_message`, `system_message`, `room_error`
+`room_created`, `room_joined`, `room_state`, `player_joined`, `player_left`, `host_changed`, `game_started`, `game_state`, `game_over`, `match_ended`, `room_message`, `chat_history`, `room_system_message`, `room_typing`, `chat_error`, `room_error`
 
-Create and join use acknowledgement callbacks so the UI can display errors immediately.
+Create, join, reconnect and message sending use acknowledgement callbacks so the UI can display errors immediately.
 
 ### One room = one shared match
 A room is permanently locked to the game it was created for. The creator selects a game, the server stores its `gameId` on the room, and every player who joins receives that same `gameId` and is forced onto that game screen (`openRoomGame` in `static/js/multiplayer.js`). Joiners never choose a game; the room's game is authoritative. Actions that reference a different `gameId` are rejected by the server.
+
+### Private room chat + stable player sessions
+Every room owns its private chat. Messages are created **only on the server** (`server/chatManager.js`), scoped to one room via `io.to(room.code)`, capped at 300 characters, rate limited to ~5 per 10 seconds per player, and kept to the latest 100 per room. History is restored on join/reconnect, and message ids are de-duplicated on the client (`static/js/room-chat.js`) so history + live events never render twice.
+
+Each browser tab generates a stable `playerSessionId` (`crypto.randomUUID` in sessionStorage). Navigating from the lobby to a game page creates a new socket connection - the server matches the player by `sessionId`, swaps the `socketId` in place and keeps their role, so a page transition never duplicates or drops a player. A short disconnect grace period (8s) covers navigation; `reconnect_room` cancels it, otherwise the player is removed and the match ends.
+
+The reusable chat component (`static/js/room-chat.js`, `static/css/room-chat.css`) is mounted in the multiplayer lobby AND on every game page: a two-column desktop layout keeps the game the main focus with a 320-380px chat sidebar, while mobile uses a floating chat button with an unread-message badge and a bottom-sheet drawer.
 
 ### Server-authoritative game state
 The browser never decides moves, turns, scores or winners. The server owns one shared `gameState` per room:
@@ -209,7 +216,7 @@ The browser never decides moves, turns, scores or winners. The server owns one s
 - `start_game` (host only) initializes one shared match, assigns roles, picks the first turn and sets the room to `playing`.
 - `game_action { roomCode, action }` validates membership, turn and move against the game adapter, updates the shared state, then broadcasts `game_state` (and `game_over` when finished) to the whole room.
 - `play_again` resets the shared state while preserving room, players, roles and the locked game.
-- If a player disconnects mid-match, the match is ended, the room returns to `waiting` (no bot is created) and the remaining player is notified; the room is deleted when no players remain.
+- If a player disconnects mid-match, a short grace period lets them reconnect (page navigation/refresh) before the match is ended, the room returns to `waiting` (no bot is created) and the remaining player is notified; the room is deleted when no players remain.
 
 ### Game adapters
 Server-side handlers live in `server/gameHandlers/`. Each adapter implements `createInitialState`, `assignRoles`, `firstTurn`, `nextTurn`, `validateAction`, `applyAction`, `checkWinner` and `resetState`:
@@ -227,13 +234,14 @@ const gameHandlers = {
 ```
 
 ### Multiplayer readiness
-Room lobby, player list, host transfer, start status, invite links and chat are available for all 11 games.
+Room lobby, player list, host transfer, start status, invite links and chat are available for all 11 games, and every game has a **complete** server-side multiplayer adapter.
 
-Games with a **complete** multiplayer game-state adapter (shared server state, role assignment, turn validation, move validation, winner detection, Socket.IO sync):
-- **Tic Tac Toe Grid** (`tictactoe`)
+The central registry in `server/gameRegistry.js` lists all 11 games with their player limits and mode (`turn-based` shared board or `simultaneous` competitive). `server/gameHandlers/index.js` maps every registered game id to its adapter:
 
-Games still in single-player mode until their adapters are implemented:
-Snake Rush, Memory Pulse, Quiz Reactor, Spin the Wheel, Ludo Blitz, Neon Chess, 2048 Surge, Whack-a-Mole, Flappy Burst and Breakout Neon. These can still be played normally and can host/join no rooms until flagged `multiplayerReady: true` in `server/gameHandlers/index.js`.
+- **Turn-based shared board:** Tic Tac Toe Grid (`tictactoe`), Neon Chess (`chess`), Ludo Blitz (`ludo`)
+- **Simultaneous competitive:** Snake Rush (`snake`), Memory Pulse (`memory`), Quiz Reactor (`quiz`), Spin the Wheel (`spinwheel`), 2048 Surge (`2048`), Whack-a-Mole (`whackamole`), Flappy Burst (`flappy`), Breakout Neon (`breakout`)
+
+Single-player mode is fully preserved: when a game page is not inside a room, the original local game runs unchanged.
 
 ### Request / Response format
 - Score save request payload:

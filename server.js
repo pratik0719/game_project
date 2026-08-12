@@ -7,6 +7,7 @@ const path = require("node:path");
 const { Server } = require("socket.io");
 const { XMLParser, XMLBuilder } = require("fast-xml-parser");
 const { gameConfig: multiplayerGameConfig, listGameConfig } = require("./server/gameHandlers");
+const { gameRegistry } = require("./server/gameRegistry");
 const { RoomManager } = require("./server/roomManager");
 const { registerSocketHandlers } = require("./server/socketHandlers");
 
@@ -219,7 +220,7 @@ app.get("/api/leaderboard", (request, response) => {
 });
 
 app.get("/api/multiplayer/config", (_request, response) => {
-  return response.json({ games: listGameConfig() });
+  return response.json({ games: listGameConfig(), registry: gameRegistry });
 });
 
 ensureScoresFile();

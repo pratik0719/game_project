@@ -1,11 +1,20 @@
 "use strict";
 
+const { createSystemMessage } = require("./chatManager");
+
 const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ROOM_CODE_LENGTH = 6;
 const MAX_ROOM_MESSAGES = 100;
 const EMPTY_ROOM_TTL_MS = 10 * 60 * 1000;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * Room lifecycle. Players are identified by a STABLE sessionId that the
+ * browser keeps in sessionStorage across full-page navigations (lobby ->
+ * game page -> refresh). socketId is only the *current* transport and is
+ * updated whenever a player reconnects, so a page transition never looks
+ * like a new player joining or an old one leaving.
+ */
 class RoomManager {
   constructor(gameConfig) {
     this.rooms = new Map();
@@ -14,7 +23,7 @@ class RoomManager {
     this.gameConfig = gameConfig;
   }
 
-  createRoom({ socketId, clientId, playerName, gameId }) {
+  createRoom({ socketId, clientId, sessionId, playerName, gameId }) {
     const config = this.gameConfig[gameId];
     if (!config) return { ok: false, error: "Invalid game selected." };
     if (!config.multiplayerReady) return { ok: false, error: "This game does not support multiplayer rooms yet." };
@@ -22,7 +31,8 @@ class RoomManager {
     const room = {
       code: this.generateRoomCode(),
       gameId,
-      gameTitle: config.title || gameId,
+      gameName: config.title || gameId,
+      gameMode: config.mode || "turn-based",
       hostId: socketId,
       status: "waiting",
       players: [],
@@ -37,7 +47,7 @@ class RoomManager {
     };
 
     this.rooms.set(room.code, room);
-    this.addPlayer(room, { socketId, clientId, name: playerName });
+    this.addPlayer(room, { socketId, clientId, sessionId, name: playerName });
     return { ok: true, room: this.publicRoom(room), roomCode: room.code };
   }
 
@@ -46,17 +56,17 @@ class RoomManager {
    * Used before leaveBySocket so a failed join (bad code, full room, etc.)
    * never evicts the user from the room they are currently in.
    */
-  preflightJoin({ roomCode, clientId }) {
+  preflightJoin({ roomCode, clientId, sessionId }) {
     const code = normalizeRoomCode(roomCode);
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: "Room not found." };
     if (room.status !== "waiting") return { ok: false, error: "Game has already started." };
-    const existingByClient = room.players.find((player) => player.clientId === clientId);
-    if (!existingByClient && room.players.length >= room.maxPlayers) return { ok: false, error: "Room is full." };
+    const existing = findPlayer(room, { clientId, sessionId });
+    if (!existing && room.players.length >= room.maxPlayers) return { ok: false, error: "Room is full." };
     return { ok: true };
   }
 
-  joinRoom({ socketId, clientId, playerName, roomCode }) {
+  joinRoom({ socketId, clientId, sessionId, playerName, roomCode }) {
     const code = normalizeRoomCode(roomCode);
     if (!isValidRoomCode(code)) return { ok: false, error: "Invalid room code." };
 
@@ -64,20 +74,102 @@ class RoomManager {
     if (!room) return { ok: false, error: "Room not found." };
     if (room.status !== "waiting") return { ok: false, error: "Game has already started." };
 
-    const existingByClient = room.players.find((player) => player.clientId === clientId);
-    if (existingByClient) {
-      existingByClient.socketId = socketId;
-      existingByClient.name = playerName;
+    const existing = findPlayer(room, { clientId, sessionId });
+    if (existing) {
+      existing.socketId = socketId;
+      existing.name = playerName;
+      existing.isConnected = true;
       this.socketToRoom.set(socketId, room.code);
-      this.clientToSocket.set(clientId, socketId);
+      if (existing.clientId) this.clientToSocket.set(existing.clientId, socketId);
+      // A host refresh/reconnect swaps the socket before the old one
+      // disconnects - keep the host pointing at the live socket so the
+      // host is still recognized (Start Game button stays visible).
+      if (existing.isHost) room.hostId = socketId;
       room.lastActivityAt = Date.now();
       return { ok: true, room: this.publicRoom(room), roomCode: room.code, rejoined: true };
     }
 
     if (room.players.length >= room.maxPlayers) return { ok: false, error: "Room is full." };
 
-    this.addPlayer(room, { socketId, clientId, name: playerName });
+    this.addPlayer(room, { socketId, clientId, sessionId, name: playerName });
     return { ok: true, room: this.publicRoom(room), roomCode: room.code, rejoined: false };
+  }
+
+  /**
+   * Rejoin an existing room after a full-page navigation (lobby -> game
+   * page) or a socket reconnection. The player is found by their stable
+   * sessionId, their socketId is swapped, and their role/state is kept.
+   */
+  reconnectRoom({ socketId, sessionId, roomCode }) {
+    const code = normalizeRoomCode(roomCode);
+    if (!isValidRoomCode(code)) return { ok: false, error: "Invalid room code." };
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: "Room not found." };
+
+    const player = room.players.find((entry) => entry.sessionId === sessionId);
+    if (!player) return { ok: false, error: "You are not a member of that room." };
+
+    const oldSocketId = player.socketId;
+    player.socketId = socketId;
+    player.isConnected = true;
+    this.socketToRoom.set(socketId, room.code);
+    if (player.clientId) this.clientToSocket.set(player.clientId, socketId);
+    if (player.isHost) room.hostId = socketId;
+    // If this player owned the current turn, point the turn at the live socket
+    // so a mid-match refresh does not strand their move.
+    if (room.currentTurn === oldSocketId) room.currentTurn = socketId;
+    room.lastActivityAt = Date.now();
+
+    return { ok: true, room: this.publicRoom(room), roomCode: room.code, rejoined: true };
+  }
+
+  /** Mark a player's socket as disconnected but KEEP them in the room so a
+   *  quick page navigation does not drop them. Removal happens later via
+   *  removePlayerBySessionId once the grace period expires. */
+  markPlayerDisconnected(socketId) {
+    const roomCode = this.socketToRoom.get(socketId);
+    if (!roomCode) return null;
+    const room = this.rooms.get(roomCode);
+    if (!room) {
+      this.socketToRoom.delete(socketId);
+      return null;
+    }
+    const player = room.players.find((entry) => entry.socketId === socketId);
+    if (!player) {
+      this.socketToRoom.delete(socketId);
+      return null;
+    }
+    player.isConnected = false;
+    this.socketToRoom.delete(socketId);
+    room.lastActivityAt = Date.now();
+    return { roomCode, player: publicPlayer(player), room };
+  }
+
+  /** Actually remove a player after the disconnect grace period. */
+  removePlayerBySessionId(roomCode, sessionId) {
+    const room = this.getRoom(roomCode);
+    if (!room) return null;
+    const index = room.players.findIndex((entry) => entry.sessionId === sessionId);
+    if (index === -1) return null;
+
+    const [removed] = room.players.splice(index, 1);
+    this.socketToRoom.delete(removed.socketId);
+    if (removed?.clientId) this.clientToSocket.delete(removed.clientId);
+
+    let hostChanged = null;
+    if (room.players.length === 0) {
+      room.lastActivityAt = Date.now();
+      return { deleted: false, roomCode: room.code, player: publicPlayer(removed), room: this.publicRoom(room), hostChanged };
+    }
+
+    if (room.hostId === removed.socketId) {
+      room.hostId = room.players[0].socketId;
+      room.players[0].isHost = true;
+      hostChanged = publicPlayer(room.players[0]);
+    }
+
+    room.lastActivityAt = Date.now();
+    return { deleted: false, roomCode: room.code, player: publicPlayer(removed), room: this.publicRoom(room), hostChanged };
   }
 
   leaveBySocket(socketId) {
@@ -103,8 +195,14 @@ class RoomManager {
     const oldHostId = room.hostId;
     let hostChanged = null;
     if (room.players.length === 0) {
-      this.rooms.delete(room.code);
-      return { deleted: true, roomCode: room.code, player: publicPlayer(removed), room: null, hostChanged };
+      // Keep the empty room alive for a short grace period (pruned later by
+      // pruneInactiveRooms). This lets the host's browser rejoin the SAME room
+      // after navigating to the game page or refreshing - without it, the room
+      // died mid-navigation and the host landed on the game page with no lobby
+      // and no way to start the match. A player who joins an empty room adopts
+      // it as the new host (addPlayer handles isHost/hostId).
+      room.lastActivityAt = Date.now();
+      return { deleted: false, roomCode: room.code, player: publicPlayer(removed), room: this.publicRoom(room), hostChanged };
     }
 
     if (oldHostId === socketId) {
@@ -130,11 +228,18 @@ class RoomManager {
     return Boolean(room?.players.some((player) => player.socketId === socketId));
   }
 
+  isSessionInRoom(sessionId, roomCode) {
+    const room = this.getRoom(roomCode);
+    return Boolean(room?.players.some((player) => player.sessionId === sessionId));
+  }
+
   publicRoom(room) {
     return {
       code: room.code,
       gameId: room.gameId,
+      gameName: room.gameName || room.gameTitle,
       gameTitle: room.gameTitle,
+      gameMode: room.gameMode || null,
       hostId: room.hostId,
       status: room.status,
       players: room.players.map(publicPlayer),
@@ -143,10 +248,15 @@ class RoomManager {
       gameState: room.gameState,
       currentTurn: room.currentTurn,
       round: room.round || 0,
-      messages: room.messages.map(publicMessage),
       createdAt: room.createdAt,
       lastActivityAt: room.lastActivityAt,
     };
+  }
+
+  /** Public copy of the room's chat history (newest-first pruning kept). */
+  getChatMessages(room) {
+    if (!room) return [];
+    return room.messages.map(publicMessage);
   }
 
   addMessage(room, message) {
@@ -157,12 +267,7 @@ class RoomManager {
   }
 
   addSystemMessage(room, text) {
-    return this.addMessage(room, {
-      type: "system",
-      sender: "System",
-      text,
-      time: new Date().toISOString(),
-    });
+    return this.addMessage(room, createSystemMessage(room, text));
   }
 
   /**
@@ -183,6 +288,11 @@ class RoomManager {
     return this.publicRoom(room);
   }
 
+  /** Mark a room as active (used by server-side game tickers). */
+  touchRoom(room) {
+    room.lastActivityAt = Date.now();
+  }
+
   pruneInactiveRooms() {
     const now = Date.now();
     for (const [code, room] of this.rooms.entries()) {
@@ -192,13 +302,17 @@ class RoomManager {
     }
   }
 
-  addPlayer(room, { socketId, clientId, name }) {
+  addPlayer(room, { socketId, clientId, sessionId, name }) {
     const player = {
+      sessionId,
       socketId,
       clientId,
       name,
       playerNumber: nextPlayerNumber(room.players),
       isHost: room.players.length === 0,
+      role: undefined,
+      isConnected: true,
+      joinedAt: Date.now(),
     };
     room.players.push(player);
     if (player.isHost) room.hostId = socketId;
@@ -220,6 +334,14 @@ class RoomManager {
   }
 }
 
+function findPlayer(room, { clientId, sessionId }) {
+  return room.players.find(
+    (player) =>
+      (sessionId && player.sessionId === sessionId) ||
+      (clientId && player.clientId === clientId)
+  );
+}
+
 function normalizeRoomCode(value) {
   return String(value || "").trim().toUpperCase();
 }
@@ -231,20 +353,30 @@ function isValidRoomCode(code) {
 function publicPlayer(player) {
   return {
     socketId: player.socketId,
+    sessionId: player.sessionId,
     name: player.name,
     playerNumber: player.playerNumber,
     isHost: Boolean(player.isHost),
     role: player.role || null,
+    isConnected: player.isConnected !== false,
+    joinedAt: player.joinedAt || 0,
   };
 }
 
 function publicMessage(message) {
   return {
-    type: message.type || "chat",
-    sender: message.sender || "Player",
+    id: message.id || randomId(),
+    roomCode: message.roomCode || null,
+    senderSessionId: message.senderSessionId || null,
+    senderName: message.senderName || message.sender || null,
+    type: message.type === "system" ? "system" : "player",
     text: message.text || "",
-    time: message.time || new Date().toISOString(),
+    createdAt: message.createdAt || new Date(message.time || Date.now()).getTime() || Date.now(),
   };
+}
+
+function randomId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
 function nextPlayerNumber(players) {

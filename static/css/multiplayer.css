@@ -8,7 +8,7 @@
 }
 
 .multiplayer-head,
-.mp-lobby-main {
+.mp-lobby-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -97,6 +97,10 @@
   color: #ff9aac;
 }
 
+/* ------------------------------------------------------------------
+ * Lobby (home page) - two-column: room controls | room chat
+ * ------------------------------------------------------------------ */
+
 .mp-lobby {
   margin-top: 1rem;
   border-top: 1px solid var(--line);
@@ -105,6 +109,85 @@
 
 .mp-lobby.hidden {
   display: none;
+}
+
+.mp-lobby-head {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mp-lobby-game {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.mp-lobby-icon {
+  --chat-accent: var(--accent, #39ff14);
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  font-size: 1.7rem;
+  border: 1px solid color-mix(in srgb, var(--chat-accent) 55%, var(--line) 45%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--chat-accent) 12%, rgba(8, 13, 26, 0.8));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--chat-accent) 30%, transparent);
+}
+
+.mp-lobby-game h3 {
+  margin: 0.1rem 0 0;
+  font-size: 1.05rem;
+}
+
+.mp-lobby-game .eyebrow {
+  font-size: 0.7rem;
+}
+
+.mp-lobby-body {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.mp-lobby-main {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.mp-lobby-players-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 18px);
+  background: rgba(8, 13, 26, 0.5);
+  padding: 0.85rem;
+}
+
+.mp-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mp-card-head h4 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.mp-chip {
+  display: inline-flex;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-dim);
+  font-size: 0.74rem;
+  white-space: nowrap;
 }
 
 .mp-actions {
@@ -145,12 +228,9 @@
   transform: none;
 }
 
-.mp-room-body {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: minmax(210px, 0.8fr) minmax(260px, 1.2fr);
-  gap: 1rem;
-}
+/* ------------------------------------------------------------------
+ * Room player list (lobby list + game-page chips)
+ * ------------------------------------------------------------------ */
 
 .mp-player-list {
   list-style: none;
@@ -160,52 +240,178 @@
   gap: 0.45rem;
 }
 
-.mp-player-list li {
+.mp-player-chips {
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.mp-room-player {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.48rem 0.6rem;
+  border-radius: 12px;
+  padding: 0.5rem 0.65rem;
   background: rgba(8, 13, 26, 0.62);
+  min-width: 0;
+}
+
+.mp-player-chips .mp-room-player {
+  border-radius: 999px;
+  padding: 0.34rem 0.75rem 0.34rem 0.4rem;
+}
+
+.mp-room-player-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, var(--line) 40%);
+  color: var(--accent-glow);
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.78rem;
+  background: color-mix(in srgb, var(--accent) 12%, rgba(8, 13, 26, 0.9));
+}
+
+.mp-room-player-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.mp-player-chips .mp-room-player-info {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.mp-room-player-name {
+  color: var(--text-main);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mp-room-player-role {
+  color: var(--accent-glow);
+  font-size: 0.72rem;
+  font-family: "Orbitron", sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.mp-room-player-state {
+  color: var(--danger);
+  font-size: 0.72rem;
+}
+
+.mp-room-player.offline {
+  opacity: 0.62;
 }
 
 .mp-host-badge {
   color: var(--accent-glow);
   font-family: "Orbitron", sans-serif;
   font-size: 0.72rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, var(--line) 40%);
+  border-radius: 999px;
+  padding: 0.12rem 0.42rem;
+  margin-left: auto;
+  white-space: nowrap;
 }
 
-.mp-chat {
+.mp-player-chips .mp-host-badge {
+  margin-left: 0;
+}
+
+/* ------------------------------------------------------------------
+ * Game page: in-room layout (room bar + game + chat sidebar)
+ * ------------------------------------------------------------------ */
+
+.mp-room-view {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.85rem;
 }
 
-.mp-chat-log {
-  min-height: 160px;
-  max-height: 260px;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(6, 10, 20, 0.64);
-  padding: 0.65rem;
+.mp-room-view.hidden {
+  display: none;
+}
+
+.mp-room-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.8rem 0.95rem;
+}
+
+.mp-room-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.mp-room-bar-info h3 {
+  margin: 0.1rem 0 0;
+  font-size: 1rem;
+}
+
+.mp-room-bar-info .eyebrow {
+  font-size: 0.7rem;
+}
+
+.mp-room-bar .mp-actions {
+  justify-content: flex-start;
+}
+
+.page-game.in-room .game-layout {
   display: grid;
-  align-content: start;
-  gap: 0.42rem;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-areas:
+    "room room"
+    "game chat";
+  gap: 1rem;
+  align-items: start;
 }
 
-.mp-message {
-  display: grid;
-  gap: 0.08rem;
+.page-game.in-room .multiplayer-panel {
+  display: none;
 }
 
-.mp-message-meta {
+.page-game.in-room .mp-room-view {
+  grid-area: room;
+}
+
+.page-game.in-room .game-shell {
+  grid-area: game;
+}
+
+.page-game.in-room .mp-chat-mount {
+  grid-area: chat;
+  min-width: 0;
+}
+
+.mp-room-players {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.mp-chip-label {
   color: var(--text-dim);
-  font-size: 0.82rem;
-}
-
-.mp-message.system .mp-message-text {
-  color: var(--accent-glow);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .mp-badge {
@@ -254,24 +460,203 @@
   margin: 0;
 }
 
-@media (max-width: 860px) {
-  .mp-grid,
-  .mp-room-body {
+.game-card-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.game-card-actions .btn {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------
+ * Game-selection modal (registry-driven picker).
+ * ------------------------------------------------------------------ */
+
+.mp-picker-box {
+  width: min(680px, calc(100% - 2rem));
+  max-height: 86vh;
+  overflow: auto;
+  padding: 1.1rem;
+}
+
+.mp-picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.mp-picker-head h3 {
+  margin: 0.25rem 0 0;
+}
+
+.mp-picker-close {
+  line-height: 1;
+  font-size: 1.2rem;
+  padding: 0.35rem 0.7rem;
+}
+
+.mp-picker-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.65rem;
+  max-height: 46vh;
+  overflow: auto;
+  padding: 0.15rem;
+}
+
+.mp-picker-card {
+  --accent: #39ff14;
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+  text-align: center;
+  padding: 0.8rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(8, 13, 26, 0.66);
+  color: var(--text-main);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.16s ease, border-color 0.18s ease, box-shadow 0.2s ease;
+}
+
+.mp-picker-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line) 40%);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+.mp-picker-card.selected {
+  border-color: color-mix(in srgb, var(--accent) 85%, #ffffff 15%);
+  background: color-mix(in srgb, var(--accent) 14%, rgba(8, 13, 26, 0.9));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent),
+    0 0 18px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.mp-picker-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.mp-picker-name {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+}
+
+.mp-picker-players {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.14rem 0.5rem;
+}
+
+.mp-picker-step2 {
+  margin-top: 0.9rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.9rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.mp-picker-step2.hidden {
+  display: none;
+}
+
+.mp-picker-selected {
+  margin: 0;
+  color: var(--text-main);
+}
+
+.mp-picker-selected strong {
+  color: var(--accent-glow);
+}
+
+.mp-picker-form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.mp-picker-form label {
+  color: var(--text-dim);
+}
+
+.mp-picker-form input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.58rem 0.68rem;
+  background: rgba(8, 13, 26, 0.9);
+  color: var(--text-main);
+  outline: none;
+}
+
+.mp-picker-form input:focus {
+  border-color: var(--accent-glow);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.mp-picker-form .mp-actions {
+  justify-content: flex-start;
+}
+
+/* ------------------------------------------------------------------
+ * Responsive
+ * ------------------------------------------------------------------ */
+
+@media (max-width: 1080px) {
+  .page-game.in-room .game-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+@media (max-width: 900px) {
+  .mp-grid {
     grid-template-columns: 1fr;
   }
 
   .multiplayer-head,
-  .mp-lobby-main {
+  .mp-lobby-head {
     flex-direction: column;
   }
 
   .mp-actions {
     justify-content: flex-start;
   }
+
+  .mp-lobby-body {
+    grid-template-columns: 1fr;
+  }
+
+  .page-game.in-room .game-layout {
+    display: block;
+  }
+
+  .page-game.in-room .mp-chat-mount {
+    margin-top: 0.6rem;
+  }
+
+  /* The mobile chat drawer must not cover the game controls. */
+  .page-game.in-room .game-shell {
+    margin-bottom: 0.4rem;
+  }
 }
 
 @media (max-width: 540px) {
   .mp-inline {
     flex-direction: column;
+  }
+
+  .mp-room-bar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
