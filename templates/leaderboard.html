@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ platform_name }} | Leaderboard</title>
+  <title><%= platformName %> | Leaderboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
-  <script defer src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <script defer src="/static/js/main.js"></script>
 </head>
-<body class="page-leaderboard" data-page="leaderboard" data-games="{% for g in games %}{{ g.name }}{% if not loop.last %},{% endif %}{% endfor %}">
+<body class="page-leaderboard" data-page="leaderboard" data-games="<%= games.map((game) => game.name).join(',') %>">
   <header class="site-header">
     <div class="brand-wrap">
       <span class="brand-icon">🏁</span>
-      <h1>{{ platform_name }}</h1>
+      <h1><%= platformName %></h1>
     </div>
     <nav class="top-nav">
-      <a class="btn btn-outline" href="{{ url_for('home') }}">Home</a>
+      <a class="btn btn-outline" href="/">Home</a>
     </nav>
   </header>
 
@@ -27,5 +27,6 @@
       <div id="leaderboard-root" class="leaderboard-grid"></div>
     </section>
   </main>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
 </body>
 </html>

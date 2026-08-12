@@ -3,30 +3,103 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ platform_name }} | {{ game_title }}</title>
+  <title><%= platformName %> | <%= gameTitle %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
-  <script defer src="{{ url_for('static', filename='js/main.js') }}"></script>
-  <script defer src="{{ url_for('serve_game_asset', game_name=game_name, filename=game_script) }}"></script>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/multiplayer.css" />
+  <script defer src="/static/js/main.js"></script>
+  <script defer src="/socket.io/socket.io.js"></script>
+  <script defer src="/static/js/multiplayer.js"></script>
+  <script defer src="/games/<%= encodeURIComponent(gameName) %>/<%= encodeURIComponent(gameScript) %>"></script>
 </head>
-<body class="page-game" data-page="game" data-game="{{ game_name }}" style="--accent: {{ accent }};">
+<body class="page-game" data-page="game" data-game="<%= gameName %>" style="--accent: <%= accent %>;">
   <header class="site-header">
     <div class="brand-wrap">
       <span class="brand-icon">&#x1F579;</span>
-      <h1>{{ platform_name }}</h1>
+      <h1><%= platformName %></h1>
     </div>
     <nav class="top-nav">
-      <a class="btn btn-outline" href="{{ url_for('home') }}">Home</a>
-      <a class="btn btn-outline" href="{{ url_for('leaderboard_page') }}">Leaderboard</a>
+      <a class="btn btn-outline" href="/">Home</a>
+      <a class="btn btn-outline" href="/leaderboard">Leaderboard</a>
     </nav>
   </header>
 
   <main class="game-layout">
+    <section id="multiplayer-panel" class="multiplayer-panel card-surface" data-current-game="<%= gameName %>">
+      <div class="multiplayer-head">
+        <div>
+          <p class="eyebrow">MULTIPLAYER</p>
+          <h2>Room for <%= gameTitle %></h2>
+        </div>
+        <span id="mp-connection" class="mp-status">Connecting...</span>
+      </div>
+
+      <div class="mp-grid">
+        <form id="mp-name-form" class="mp-card">
+          <label for="mp-player-name">Display name</label>
+          <div class="mp-inline">
+            <input id="mp-player-name" type="text" maxlength="20" autocomplete="nickname" placeholder="Pratik" />
+            <button class="btn btn-outline" type="submit">Save</button>
+          </div>
+          <p id="mp-name-error" class="mp-error" aria-live="polite"></p>
+        </form>
+
+        <form id="mp-create-form" class="mp-card">
+          <input id="mp-game-select" type="hidden" value="<%= gameName %>" />
+          <label>Create room</label>
+          <button class="btn btn-primary" type="submit">Create Room</button>
+        </form>
+
+        <form id="mp-join-form" class="mp-card">
+          <label for="mp-room-code">Join by room code</label>
+          <div class="mp-inline">
+            <input id="mp-room-code" type="text" maxlength="6" autocomplete="off" placeholder="A7BK92" />
+            <button class="btn btn-primary" type="submit">Join Room</button>
+          </div>
+          <p id="mp-action-error" class="mp-error" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div id="mp-lobby" class="mp-lobby hidden" aria-live="polite">
+        <div class="mp-lobby-main">
+          <div>
+            <span class="category-chip">Room <span id="mp-lobby-code"></span></span>
+            <h3 id="mp-lobby-game">Selected game</h3>
+            <p id="mp-lobby-status" class="mp-muted">Waiting for players</p>
+          </div>
+          <div class="mp-code-box" aria-label="Current room code">
+            <span>Room Code</span>
+            <strong id="mp-lobby-code-display"></strong>
+          </div>
+          <div class="mp-actions">
+            <button id="mp-copy-code" class="btn btn-outline" type="button">Copy Code</button>
+            <button id="mp-copy-link" class="btn btn-outline" type="button">Copy Invite Link</button>
+            <button id="mp-start-game" class="btn btn-primary" type="button">Start Game</button>
+            <button id="mp-leave-room" class="btn btn-outline" type="button">Leave Room</button>
+          </div>
+        </div>
+        <div class="mp-room-body">
+          <div>
+            <h4>Players</h4>
+            <ul id="mp-player-list" class="mp-player-list"></ul>
+          </div>
+          <form id="mp-chat-form" class="mp-chat">
+            <h4>Live Chat</h4>
+            <div id="mp-chat-log" class="mp-chat-log" aria-live="polite"></div>
+            <div class="mp-inline">
+              <input id="mp-chat-input" type="text" maxlength="300" placeholder="Message the room" />
+              <button class="btn btn-primary" type="submit">Send</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
     <section class="game-shell card-surface">
       <div class="game-shell-head">
-        <h2>{{ game_title }}</h2>
+        <h2><%= gameTitle %></h2>
         <p id="game-status" class="game-status">Loading game...</p>
       </div>
       <div id="game-root" class="game-root"></div>
@@ -50,5 +123,6 @@
       </form>
     </div>
   </section>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
 </body>
 </html>

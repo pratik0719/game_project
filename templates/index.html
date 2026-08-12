@@ -1,167 +1,31 @@
-﻿{% macro game_thumbnail(game_name) -%}
-  {% if game_name == 'snake' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#08121f"/>
-    <g stroke="#17314f" stroke-width="1">
-      {% for i in range(0, 320, 20) %}<line x1="{{ i }}" y1="0" x2="{{ i }}" y2="140"/>{% endfor %}
-      {% for j in range(0, 140, 20) %}<line x1="0" y1="{{ j }}" x2="320" y2="{{ j }}"/>{% endfor %}
-    </g>
-    <path d="M20 94 C62 35, 114 120, 162 75 C196 42, 238 62, 278 44" stroke="#39ff14" stroke-width="14" fill="none" stroke-linecap="round"/>
-    <circle cx="278" cy="44" r="11" fill="#9aff52"/>
-    <circle cx="282" cy="41" r="2" fill="#09111f"/>
-  </svg>
-  {% elif game_name == 'memory' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#071220"/>
-    <rect x="68" y="28" width="90" height="90" rx="14" fill="#15304a" stroke="#00e5ff" stroke-width="3"/>
-    <rect x="162" y="22" width="90" height="90" rx="14" fill="#091d32" stroke="#88f6ff" stroke-width="3"/>
-    <text x="111" y="84" text-anchor="middle" font-size="44" fill="#00e5ff">?</text>
-    <text x="206" y="80" text-anchor="middle" font-size="36" fill="#88f6ff">🧠</text>
-  </svg>
-  {% elif game_name == 'quiz' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <defs><linearGradient id="quizGlow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd15a"/><stop offset="1" stop-color="#ffb703"/></linearGradient></defs>
-    <rect width="320" height="140" fill="#1b1305"/>
-    <path d="M150 24 L108 78 L144 78 L126 118 L196 60 L158 60 Z" fill="url(#quizGlow)"/>
-    <text x="242" y="92" font-size="72" fill="#ffca3a" font-family="Orbitron, sans-serif">?</text>
-  </svg>
-  {% elif game_name == 'tictactoe' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#200a1c"/>
-    <g stroke="#ff4d9d" stroke-width="6">
-      <line x1="108" y1="24" x2="108" y2="116"/>
-      <line x1="176" y1="24" x2="176" y2="116"/>
-      <line x1="74" y1="54" x2="210" y2="54"/>
-      <line x1="74" y1="86" x2="210" y2="86"/>
-    </g>
-    <g stroke="#ff9fd1" stroke-width="7" fill="none">
-      <line x1="84" y1="66" x2="100" y2="82"/><line x1="100" y1="66" x2="84" y2="82"/>
-      <circle cx="142" cy="70" r="11"/>
-      <line x1="184" y1="98" x2="200" y2="114"/><line x1="200" y1="98" x2="184" y2="114"/>
-    </g>
-  </svg>
-  {% elif game_name == 'ludo' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#241106"/>
-    <rect x="80" y="20" width="160" height="100" rx="10" fill="#111a2b" stroke="#ff6b35"/>
-    <rect x="90" y="30" width="65" height="40" fill="#ff595e"/>
-    <rect x="165" y="30" width="65" height="40" fill="#8ac926"/>
-    <rect x="90" y="80" width="65" height="30" fill="#ffca3a"/>
-    <rect x="165" y="80" width="65" height="30" fill="#1982c4"/>
-    <circle cx="122" cy="50" r="8" fill="#fff"/><circle cx="197" cy="50" r="8" fill="#fff"/>
-    <circle cx="122" cy="95" r="8" fill="#fff"/><circle cx="197" cy="95" r="8" fill="#fff"/>
-  </svg>
-  {% elif game_name == 'chess' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#18140a"/>
-    <rect x="90" y="24" width="140" height="92" rx="10" fill="#0c1422" stroke="#f0c040"/>
-    <path d="M160 42 C144 38, 138 54, 149 62 C138 68, 140 82, 153 86 L142 100 L178 100 L167 86 C182 80, 184 62, 170 56 C179 48, 172 36, 160 42 Z" fill="#f7e2a8"/>
-    <rect x="140" y="102" width="40" height="8" fill="#f0c040"/>
-  </svg>
-  {% elif game_name == 'spinwheel' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#160d29"/>
-    <g transform="translate(160 72)">
-      <circle r="48" fill="#1b1233" stroke="#c084fc" stroke-width="3"/>
-      <path d="M0 0 L0 -48 A48 48 0 0 1 34 -34 Z" fill="#f472b6"/>
-      <path d="M0 0 L34 -34 A48 48 0 0 1 48 0 Z" fill="#22d3ee"/>
-      <path d="M0 0 L48 0 A48 48 0 0 1 34 34 Z" fill="#a3e635"/>
-      <path d="M0 0 L34 34 A48 48 0 0 1 0 48 Z" fill="#facc15"/>
-      <path d="M0 0 L0 48 A48 48 0 0 1 -34 34 Z" fill="#fb7185"/>
-      <path d="M0 0 L-34 34 A48 48 0 0 1 -48 0 Z" fill="#f97316"/>
-      <path d="M0 0 L-48 0 A48 48 0 0 1 -34 -34 Z" fill="#60a5fa"/>
-      <path d="M0 0 L-34 -34 A48 48 0 0 1 0 -48 Z" fill="#c084fc"/>
-      <circle r="8" fill="#fff"/>
-    </g>
-    <polygon points="160,8 150,26 170,26" fill="#fef08a"/>
-  </svg>
-  {% elif game_name == '2048' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#26150c"/>
-    <rect x="84" y="18" width="152" height="104" rx="12" fill="#0f1524" stroke="#fb923c"/>
-    <g font-family="Orbitron, sans-serif" font-size="20" font-weight="700" text-anchor="middle">
-      <rect x="98" y="32" width="58" height="40" rx="8" fill="#fdba74"/><text x="127" y="58" fill="#2d1b12">2</text>
-      <rect x="164" y="32" width="58" height="40" rx="8" fill="#fb923c"/><text x="193" y="58" fill="#2d1b12">4</text>
-      <rect x="98" y="76" width="58" height="32" rx="8" fill="#f97316"/><text x="127" y="98" fill="#fff4ec">8</text>
-      <rect x="164" y="76" width="58" height="32" rx="8" fill="#ea580c"/><text x="193" y="98" fill="#fff4ec">16</text>
-    </g>
-  </svg>
-  {% elif game_name == 'whackamole' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#0b1d14"/>
-    <ellipse cx="94" cy="95" rx="38" ry="16" fill="#17291f"/>
-    <ellipse cx="160" cy="95" rx="38" ry="16" fill="#17291f"/>
-    <ellipse cx="226" cy="95" rx="38" ry="16" fill="#17291f"/>
-    <g transform="translate(160 64)">
-      <ellipse cx="0" cy="16" rx="22" ry="20" fill="#8b5a3c"/>
-      <circle cx="-8" cy="10" r="2" fill="#fff"/><circle cx="8" cy="10" r="2" fill="#fff"/>
-      <rect x="-2" y="16" width="4" height="5" fill="#fca5a5"/>
-    </g>
-  </svg>
-  {% elif game_name == 'flappy' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#0a1e31"/>
-    <rect x="238" y="0" width="38" height="56" fill="#22c55e"/>
-    <rect x="238" y="88" width="38" height="52" fill="#22c55e"/>
-    <circle cx="120" cy="72" r="19" fill="#38bdf8"/>
-    <polygon points="136,72 152,78 136,84" fill="#facc15"/>
-    <circle cx="126" cy="66" r="4" fill="#fff"/>
-    <circle cx="128" cy="66" r="2" fill="#0e2035"/>
-  </svg>
-  {% elif game_name == 'breakout' %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#210b2c"/>
-    <rect x="44" y="24" width="40" height="14" fill="#f472b6"/>
-    <rect x="90" y="24" width="40" height="14" fill="#e879f9"/>
-    <rect x="136" y="24" width="40" height="14" fill="#c084fc"/>
-    <rect x="182" y="24" width="40" height="14" fill="#a855f7"/>
-    <rect x="228" y="24" width="40" height="14" fill="#f0abfc"/>
-    <rect x="44" y="44" width="40" height="14" fill="#f472b6"/>
-    <rect x="90" y="44" width="40" height="14" fill="#e879f9"/>
-    <rect x="136" y="44" width="40" height="14" fill="#c084fc"/>
-    <rect x="182" y="44" width="40" height="14" fill="#a855f7"/>
-    <rect x="228" y="44" width="40" height="14" fill="#f0abfc"/>
-    <rect x="124" y="110" width="72" height="9" rx="4" fill="#93c5fd"/>
-    <circle cx="154" cy="92" r="7" fill="#fdf2f8"/>
-  </svg>
-  {% else %}
-  <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
-    <rect width="320" height="140" fill="#0c1422"/>
-    <text x="160" y="78" text-anchor="middle" font-size="22" fill="#dbeafe">Game</text>
-  </svg>
-  {% endif %}
-{%- endmacro %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ platform_name }} | Home</title>
+  <title><%= platformName %> | Home</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
-  <script defer src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/multiplayer.css" />
+  <script defer src="/static/js/main.js"></script>
+  <script defer src="/socket.io/socket.io.js"></script>
+  <script defer src="/static/js/multiplayer.js"></script>
 </head>
 <body class="page-home" data-page="home">
   <header class="site-header">
-    <div class="brand-wrap">
-      <span class="brand-icon">⚡</span>
-      <h1>{{ platform_name }}</h1>
-    </div>
-    <nav class="top-nav">
-      <a class="btn btn-outline" href="{{ url_for('leaderboard_page') }}">Leaderboard</a>
-    </nav>
+    <div class="brand-wrap"><span class="brand-icon">⚡</span><h1><%= platformName %></h1></div>
+    <nav class="top-nav"><a class="btn btn-outline" href="/leaderboard">Leaderboard</a></nav>
   </header>
 
   <main class="home-layout">
     <section class="hero-panel card-surface">
       <p class="eyebrow">MULTI-GAME PLATFORM</p>
       <h2>Pick a challenge and jump in.</h2>
-      <p>Play across arcade, board, and casual games powered by XML config and Flask APIs.</p>
+      <p>Play across arcade, board, and casual games powered by XML config and Node.js APIs.</p>
       <div class="meta-row">
-        <span class="game-count-badge">{{ game_count }} Games Available</span>
+        <span class="game-count-badge"><%= gameCount %> Games Available</span>
         <div class="filter-bar" role="tablist" aria-label="Filter games by category">
           <button class="filter-btn active" data-filter="all">ALL</button>
           <button class="filter-btn" data-filter="arcade">ARCADE</button>
@@ -171,26 +35,103 @@
       </div>
     </section>
 
+    <section id="multiplayer-panel" class="multiplayer-panel card-surface" data-current-game="">
+      <div class="multiplayer-head">
+        <div>
+          <p class="eyebrow">MULTIPLAYER</p>
+          <h2>Rooms and live chat</h2>
+        </div>
+        <span id="mp-connection" class="mp-status">Connecting...</span>
+      </div>
+
+      <div class="mp-grid">
+        <form id="mp-name-form" class="mp-card">
+          <label for="mp-player-name">Display name</label>
+          <div class="mp-inline">
+            <input id="mp-player-name" type="text" maxlength="20" autocomplete="nickname" placeholder="Pratik" />
+            <button class="btn btn-outline" type="submit">Save</button>
+          </div>
+          <p id="mp-name-error" class="mp-error" aria-live="polite"></p>
+        </form>
+
+        <form id="mp-create-form" class="mp-card">
+          <label for="mp-game-select">Create room for</label>
+          <select id="mp-game-select">
+            <% games.forEach((game) => { %>
+              <option value="<%= game.name %>"><%= game.title %></option>
+            <% }); %>
+          </select>
+          <button class="btn btn-primary" type="submit">Create Room</button>
+        </form>
+
+        <form id="mp-join-form" class="mp-card">
+          <label for="mp-room-code">Join by room code</label>
+          <div class="mp-inline">
+            <input id="mp-room-code" type="text" maxlength="6" autocomplete="off" placeholder="A7BK92" />
+            <button class="btn btn-primary" type="submit">Join Room</button>
+          </div>
+          <p id="mp-action-error" class="mp-error" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div id="mp-lobby" class="mp-lobby hidden" aria-live="polite">
+        <div class="mp-lobby-main">
+          <div>
+            <span class="category-chip">Room <span id="mp-lobby-code"></span></span>
+            <h3 id="mp-lobby-game">Selected game</h3>
+            <p id="mp-lobby-status" class="mp-muted">Waiting for players</p>
+          </div>
+          <div class="mp-code-box" aria-label="Current room code">
+            <span>Room Code</span>
+            <strong id="mp-lobby-code-display"></strong>
+          </div>
+          <div class="mp-actions">
+            <button id="mp-copy-code" class="btn btn-outline" type="button">Copy Code</button>
+            <button id="mp-copy-link" class="btn btn-outline" type="button">Copy Invite Link</button>
+            <button id="mp-start-game" class="btn btn-primary" type="button">Start Game</button>
+            <button id="mp-leave-room" class="btn btn-outline" type="button">Leave Room</button>
+          </div>
+        </div>
+        <div class="mp-room-body">
+          <div>
+            <h4>Players</h4>
+            <ul id="mp-player-list" class="mp-player-list"></ul>
+          </div>
+          <form id="mp-chat-form" class="mp-chat">
+            <h4>Live Chat</h4>
+            <div id="mp-chat-log" class="mp-chat-log" aria-live="polite"></div>
+            <div class="mp-inline">
+              <input id="mp-chat-input" type="text" maxlength="300" placeholder="Message the room" />
+              <button class="btn btn-primary" type="submit">Send</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
     <section class="games-grid" aria-label="Available games">
-      {% for game in games %}
-      <article class="game-card card-surface" style="--accent: {{ game.accent }};" data-category="{{ game.category|lower }}" data-game-name="{{ game.name }}">
-        <div class="game-thumb" role="img" aria-label="{{ game.title }} thumbnail">
-          {{ game_thumbnail(game.name) }}
+      <% games.forEach((game) => { %>
+      <article class="game-card card-surface" style="--accent: <%= game.accent %>;" data-category="<%= game.category.toLowerCase() %>" data-game-name="<%= game.name %>">
+        <div class="game-thumb" role="img" aria-label="<%= game.title %> thumbnail">
+          <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="320" height="140" fill="#0c1422" />
+            <circle cx="160" cy="68" r="44" fill="<%= game.accent %>" opacity=".2" />
+            <text x="160" y="90" text-anchor="middle" font-size="62"><%= game.icon %></text>
+          </svg>
         </div>
         <div class="game-card-content">
           <div class="badge-row">
-            <span class="category-chip">{{ game.category|upper }}</span>
-            {% if game.is_new %}
-            <span class="new-badge">NEW</span>
-            {% endif %}
+            <span class="category-chip"><%= game.category.toUpperCase() %></span>
+            <% if (game.isNew) { %><span class="new-badge">NEW</span><% } %>
           </div>
-          <h3>{{ game.title }}</h3>
-          <p>{{ game.description }}</p>
-          <a class="btn btn-primary" href="{{ url_for('load_game', game_name=game.name) }}">Play</a>
+          <h3><%= game.title %></h3>
+          <p><%= game.description %></p>
+          <a class="btn btn-primary" href="/game/<%= encodeURIComponent(game.name) %>">Play</a>
         </div>
       </article>
-      {% endfor %}
+      <% }); %>
     </section>
   </main>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
 </body>
 </html>

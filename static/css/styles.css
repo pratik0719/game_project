@@ -751,6 +751,33 @@ canvas {
   gap: 0.8rem;
 }
 
+.toast-container {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  display: grid;
+  gap: 0.5rem;
+  width: min(340px, calc(100% - 2rem));
+}
+
+.toast {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(8, 13, 26, 0.94);
+  color: var(--text-main);
+  padding: 0.7rem 0.8rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38);
+}
+
+.toast.success {
+  border-color: #33d17a;
+}
+
+.toast.error {
+  border-color: var(--danger);
+}
+
 .lb-card {
   padding: 0.85rem;
 }

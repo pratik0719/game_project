@@ -2,30 +2,34 @@
 
 ## 📌 Project Overview
 - Browser-based multi-game platform with shared backend and independent game modules.
-- Tech stack: Python, Flask, XML, JavaScript, HTML, CSS.
+- Tech stack: Node.js, Express, EJS, XML, JavaScript, HTML, CSS.
 - Configuration system uses per-game XML files and global platform XML.
 - Total games: 11
 
 ## 🚀 How to Run
-1. Install Python.
-2. Install Flask.
+1. Install Node.js 18 or later.
+2. Install dependencies.
 ```bash
-pip install flask
+npm install
 ```
 3. Run the app.
 ```bash
-python app.py
+npm start
 ```
 4. Open in browser.
 ```text
-http://127.0.0.1:5000
+http://127.0.0.1:3000
 ```
 
 ## 🗂️ Full Project Structure
 | Path | Type | Explanation |
 |---|---|---|
 | `.git` | Folder | folder |
-| `app.py` | File | Flask backend application |
+| `server.js` | File | Express backend application |
+| `server/roomManager.js` | File | In-memory multiplayer room lifecycle and validation |
+| `server/socketHandlers.js` | File | Socket.IO event handlers |
+| `server/gameHandlers/index.js` | File | Multiplayer game config and adapter entry point |
+| `package.json` | File | Node.js dependencies and scripts |
 | `config.xml` | File | XML configuration or persisted data |
 | `games` | Folder | folder |
 | `games/2048` | Folder | folder |
@@ -75,13 +79,14 @@ http://127.0.0.1:5000
 | `games/whackamole/whackamole.xml` | File | XML configuration or persisted data |
 | `generate_docs.py` | File | project file |
 | `README.md` | File | Documentation file |
-| `requirements.txt` | File | Plain text file |
 | `scores.xml` | File | XML configuration or persisted data |
 | `static` | Folder | folder |
 | `static/css` | Folder | folder |
 | `static/css/styles.css` | File | Stylesheet for shared and game-specific UI |
+| `static/css/multiplayer.css` | File | Multiplayer room and chat styling |
 | `static/js` | Folder | folder |
 | `static/js/main.js` | File | JavaScript gameplay or shared frontend logic |
+| `static/js/multiplayer.js` | File | Vanilla JavaScript Socket.IO room client |
 | `templates` | Folder | folder |
 | `templates/game.html` | File | Jinja/HTML template |
 | `templates/index.html` | File | Jinja/HTML template |
@@ -90,31 +95,28 @@ http://127.0.0.1:5000
 ## 🎮 All Games List
 | # | Game Name | Category | Tech Used | Accent Color |
 |---|---|---|---|---|
-| 1 | Snake Rush | Arcade | Vanilla JS + Flask API | `#39ff14` |
-| 2 | Memory Pulse | Casual | Vanilla JS + Flask API | `#00e5ff` |
-| 3 | Quiz Reactor | Casual | Vanilla JS + Flask API | `#ffb703` |
-| 4 | Tic Tac Toe Grid | Board | Vanilla JS + Flask API | `#ff4d9d` |
-| 5 | Ludo Blitz | Board | Vanilla JS + Flask API | `#ff6b35` |
-| 6 | Neon Chess | Board | Vanilla JS + Flask API | `#f0c040` |
-| 7 | Spin the Wheel | Casual | Vanilla JS + Flask API | `#c084fc` |
-| 8 | 2048 Surge | Board | Vanilla JS + Flask API | `#fb923c` |
-| 9 | Whack-a-Mole | Arcade | Vanilla JS + Flask API | `#4ade80` |
-| 10 | Flappy Burst | Arcade | Vanilla JS + Flask API | `#38bdf8` |
-| 11 | Breakout Neon | Arcade | Vanilla JS + Flask API | `#e879f9` |
+| 1 | Snake Rush | Arcade | Vanilla JS + Node.js API | `#39ff14` |
+| 2 | Memory Pulse | Casual | Vanilla JS + Node.js API | `#00e5ff` |
+| 3 | Quiz Reactor | Casual | Vanilla JS + Node.js API | `#ffb703` |
+| 4 | Tic Tac Toe Grid | Board | Vanilla JS + Node.js API | `#ff4d9d` |
+| 5 | Ludo Blitz | Board | Vanilla JS + Node.js API | `#ff6b35` |
+| 6 | Neon Chess | Board | Vanilla JS + Node.js API | `#f0c040` |
+| 7 | Spin the Wheel | Casual | Vanilla JS + Node.js API | `#c084fc` |
+| 8 | 2048 Surge | Board | Vanilla JS + Node.js API | `#fb923c` |
+| 9 | Whack-a-Mole | Arcade | Vanilla JS + Node.js API | `#4ade80` |
+| 10 | Flappy Burst | Arcade | Vanilla JS + Node.js API | `#38bdf8` |
+| 11 | Breakout Neon | Arcade | Vanilla JS + Node.js API | `#e879f9` |
 
 ## ⚙️ XML System Explained
 - Every game has a local XML file consumed through `/api/config/<game_name>`.
-- Flask parses XML using `xml.etree.ElementTree`.
+- Node.js parses XML using `fast-xml-parser`.
 - `config.xml` drives game-card metadata (title, accent, category).
 - `scores.xml` stores leaderboard entries grouped by game.
 
-```python
-import xml.etree.ElementTree as ET
-
-def parse_xml(file_path):
-    tree = ET.parse(file_path)
-    root = tree.getroot()
-    return {root.tag: '...'}
+```js
+const { XMLParser } = require("fast-xml-parser");
+const parser = new XMLParser();
+const config = parser.parse(xmlText);
 ```
 
 ### Example config.xml snippet
@@ -175,7 +177,44 @@ def parse_xml(file_path):
 | `GET` | `/api/config/<game_name>` | Return parsed XML config as JSON |
 | `POST` | `/api/score` | Save new score to scores.xml |
 | `GET` | `/api/leaderboard` | Return top scores per game |
+| `GET` | `/api/multiplayer/config` | Return multiplayer player limits and adapter readiness |
 | `GET` | `/games/<game_name>/<filename>` | Serve game-local assets |
+
+## Multiplayer Rooms
+- Socket.IO is attached to the same Express HTTP server, so the app stays same-origin.
+- Active rooms, players, chat messages and game state live in server memory using JavaScript `Map` objects.
+- Player names are required, trimmed, limited to 2-20 characters, and stored in browser storage.
+- Room codes are generated only on the server with six uppercase letters/numbers, excluding `0`, `O`, `1`, and `I`.
+- Chat is scoped to room members, limited to 300 characters per message, and keeps the latest 100 messages in memory.
+- Basic rate limits protect room creation, joining and chat.
+- Existing single-player game code is still loaded the same way.
+
+### Socket.IO events
+Client to server:
+`create_room`, `join_room`, `leave_room`, `start_game`, `send_message`, `game_action`, `request_room_state`
+
+Server to client:
+`room_created`, `room_joined`, `room_state`, `player_joined`, `player_left`, `host_changed`, `game_started`, `game_state`, `chat_message`, `system_message`, `room_error`
+
+Create and join use acknowledgement callbacks so the UI can display errors immediately.
+
+### Game sync adapter
+Games can send reusable multiplayer actions from the frontend:
+
+```js
+window.MultiplayerAPI.sendGameAction({
+  type: "make_move",
+  data: {}
+});
+```
+
+The backend checks that the room exists, the sender belongs to the room, and the action matches the selected game before passing it to `server/gameHandlers/index.js`. No game engine has full server-side move validation yet, so the adapter currently rejects `game_action` calls with a clear error instead of trusting the client.
+
+### Multiplayer readiness
+Room lobby, player list, host transfer, start status, invite links and chat are available for all 11 games.
+
+Game-state multiplayer adapters still need to be implemented for:
+Snake Rush, Memory Pulse, Quiz Reactor, Tic Tac Toe Grid, Spin the Wheel, Ludo Blitz, Neon Chess, 2048 Surge, Whack-a-Mole, Flappy Burst and Breakout Neon.
 
 ### Request / Response format
 - Score save request payload:
@@ -206,13 +245,13 @@ def parse_xml(file_path):
 - Tablet: supported with adaptive grid sizing.
 
 ### Local Network Access
-1. Run `python app.py` on host machine.
+1. Run `npm start` on host machine.
 2. Find host local IP (for example `192.168.1.20`).
-3. Open `http://<host-ip>:5000` from another device on same network.
-4. Allow firewall access on port 5000 if needed.
+3. Open `http://<host-ip>:3000` from another device on same network.
+4. Allow firewall access on port 3000 if needed.
 
 ## 🔮 Future Roadmap
-- Add multiplayer online infrastructure for board games.
+- Add per-game server-side multiplayer adapters for board and arcade games.
 - Add account profiles and persistent progression.
 - Add game analytics dashboard and replay exports.
 - Add mobile app wrapper (PWA + native shell).
