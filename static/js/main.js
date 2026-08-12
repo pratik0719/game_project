@@ -15,6 +15,20 @@
     breakout: "Breakout Neon",
   };
 
+  const GAME_LOGOS = {
+    snake: "/static/icons/snake.svg",
+    memory: "/static/icons/memory.svg",
+    quiz: "/static/icons/quiz.svg",
+    tictactoe: "/static/icons/tictactoe.svg",
+    spinwheel: "/static/icons/spinwheel.svg",
+    ludo: "/static/icons/ludo.svg",
+    chess: "/static/icons/chess.svg",
+    "2048": "/static/icons/2048.svg",
+    whackamole: "/static/icons/whackamole.svg",
+    flappy: "/static/icons/flappy.svg",
+    breakout: "/static/icons/breakout.svg",
+  };
+
   const ArcadeAPI = {
     async requestJSON(url, options = {}) {
       const response = await fetch(url, options);
@@ -185,7 +199,8 @@
         const entries = Array.isArray(data[gameName]) ? data[gameName] : [];
         const card = document.createElement("article");
         card.className = "lb-card card-surface";
-        card.innerHTML = `<h3>${escapeHtml(formatGameTitle(gameName))}</h3>`;
+        const logo = GAME_LOGOS[gameName];
+        card.innerHTML = `<div class="lb-head">${logo ? `<img class="lb-icon" src="${escapeHtml(logo)}" alt="" loading="lazy" />` : ""}<h3>${escapeHtml(formatGameTitle(gameName))}</h3></div>`;
 
         const list = document.createElement("ol");
         list.className = "lb-list";

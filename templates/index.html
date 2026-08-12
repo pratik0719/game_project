@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <link rel="stylesheet" href="/static/css/multiplayer.css" />
   <link rel="stylesheet" href="/static/css/room-chat.css" />
@@ -17,7 +18,10 @@
 </head>
 <body class="page-home" data-page="home">
   <header class="site-header">
-    <div class="brand-wrap"><span class="brand-icon">⚡</span><h1><%= platformName %></h1></div>
+    <div class="brand-wrap">
+      <img class="brand-logo" src="/static/icons/logo.svg" alt="" width="34" height="34" />
+      <h1><%= platformName %></h1>
+    </div>
     <nav class="top-nav"><a class="btn btn-outline" href="/leaderboard">Leaderboard</a></nav>
   </header>
 
@@ -113,12 +117,8 @@
     <section class="games-grid" aria-label="Available games">
       <% games.forEach((game) => { %>
       <article class="game-card card-surface" style="--accent: <%= game.accent %>;" data-category="<%= game.category.toLowerCase() %>" data-game-name="<%= game.name %>">
-        <div class="game-thumb" role="img" aria-label="<%= game.title %> thumbnail">
-          <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect width="320" height="140" fill="#0c1422" />
-            <circle cx="160" cy="68" r="44" fill="<%= game.accent %>" opacity=".2" />
-            <text x="160" y="90" text-anchor="middle" font-size="62"><%= game.icon %></text>
-          </svg>
+        <div class="game-thumb">
+          <img src="<%= game.logo %>" alt="<%= game.title %> icon" loading="lazy" />
         </div>
         <div class="game-card-content">
           <div class="badge-row">

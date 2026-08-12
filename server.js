@@ -21,17 +21,17 @@ const CONFIG_FILE = path.join(BASE_DIR, "config.xml");
 const SCORES_FILE = path.join(BASE_DIR, "scores.xml");
 
 const GAME_DEFAULTS = {
-  snake: { title: "Snake Rush", icon: "🐍", accent: "#39ff14", description: "Classic arcade snake on a neon grid.", script: "snake.js", configFile: "snake.xml", category: "arcade", isNew: false },
-  memory: { title: "Memory Pulse", icon: "🧠", accent: "#00e5ff", description: "Flip cards, match pairs, and beat the clock.", script: "memory.js", configFile: "memory.xml", category: "casual", isNew: false },
-  quiz: { title: "Quiz Reactor", icon: "❓", accent: "#ffb703", description: "Fast multiple-choice rounds with per-question timers.", script: "quiz.js", configFile: "quiz.xml", category: "casual", isNew: false },
-  tictactoe: { title: "Tic Tac Toe Grid", icon: "⭕", accent: "#ff4d9d", description: "Play head-to-head or challenge the AI.", script: "tictactoe.js", configFile: "tictactoe.xml", category: "board", isNew: false },
-  spinwheel: { title: "Spin the Wheel", icon: "🎡", accent: "#c084fc", description: "Spin a colorful prize wheel and stack your wins.", script: "spinwheel.js", configFile: "spinwheel.xml", category: "casual", isNew: true },
-  ludo: { title: "Ludo Blitz", icon: "🎲", accent: "#ff6b35", description: "Race tokens home in a 2-4 player Ludo showdown.", script: "ludo.js", configFile: "ludo.xml", category: "board", isNew: true },
-  chess: { title: "Neon Chess", icon: "♞", accent: "#f0c040", description: "Classic chess with legal hints and minimax AI.", script: "chess.js", configFile: "chess.xml", category: "board", isNew: true },
-  "2048": { title: "2048 Surge", icon: "🔢", accent: "#fb923c", description: "Merge tiles, chase 2048, and beat your high score.", script: "game2048.js", configFile: "game2048.xml", category: "board", isNew: true },
-  whackamole: { title: "Whack-a-Mole", icon: "🐹", accent: "#4ade80", description: "Whack popping moles before the timer ends.", script: "whackamole.js", configFile: "whackamole.xml", category: "arcade", isNew: true },
-  flappy: { title: "Flappy Burst", icon: "🐤", accent: "#38bdf8", description: "Flap through pipes in a fast side-scrolling challenge.", script: "flappy.js", configFile: "flappy.xml", category: "arcade", isNew: true },
-  breakout: { title: "Breakout Neon", icon: "🧱", accent: "#e879f9", description: "Smash bricks, preserve lives, and climb levels.", script: "breakout.js", configFile: "breakout.xml", category: "arcade", isNew: true },
+  snake: { title: "Snake Rush", icon: "🐍", logo: "/static/icons/snake.svg", accent: "#39ff14", description: "Classic arcade snake on a neon grid.", script: "snake.js", configFile: "snake.xml", category: "arcade", isNew: false },
+  memory: { title: "Memory Pulse", icon: "🧠", logo: "/static/icons/memory.svg", accent: "#00e5ff", description: "Flip cards, match pairs, and beat the clock.", script: "memory.js", configFile: "memory.xml", category: "casual", isNew: false },
+  quiz: { title: "Quiz Reactor", icon: "❓", logo: "/static/icons/quiz.svg", accent: "#ffb703", description: "Fast multiple-choice rounds with per-question timers.", script: "quiz.js", configFile: "quiz.xml", category: "casual", isNew: false },
+  tictactoe: { title: "Tic Tac Toe Grid", icon: "⭕", logo: "/static/icons/tictactoe.svg", accent: "#ff4d9d", description: "Play head-to-head or challenge the AI.", script: "tictactoe.js", configFile: "tictactoe.xml", category: "board", isNew: false },
+  spinwheel: { title: "Spin the Wheel", icon: "🎡", logo: "/static/icons/spinwheel.svg", accent: "#c084fc", description: "Spin a colorful prize wheel and stack your wins.", script: "spinwheel.js", configFile: "spinwheel.xml", category: "casual", isNew: true },
+  ludo: { title: "Ludo Blitz", icon: "🎲", logo: "/static/icons/ludo.svg", accent: "#ff6b35", description: "Race tokens home in a 2-4 player Ludo showdown.", script: "ludo.js", configFile: "ludo.xml", category: "board", isNew: true },
+  chess: { title: "Neon Chess", icon: "♞", logo: "/static/icons/chess.svg", accent: "#f0c040", description: "Classic chess with legal hints and minimax AI.", script: "chess.js", configFile: "chess.xml", category: "board", isNew: true },
+  "2048": { title: "2048 Surge", icon: "🔢", logo: "/static/icons/2048.svg", accent: "#fb923c", description: "Merge tiles, chase 2048, and beat your high score.", script: "game2048.js", configFile: "game2048.xml", category: "board", isNew: true },
+  whackamole: { title: "Whack-a-Mole", icon: "🐹", logo: "/static/icons/whackamole.svg", accent: "#4ade80", description: "Whack popping moles before the timer ends.", script: "whackamole.js", configFile: "whackamole.xml", category: "arcade", isNew: true },
+  flappy: { title: "Flappy Burst", icon: "🐤", logo: "/static/icons/flappy.svg", accent: "#38bdf8", description: "Flap through pipes in a fast side-scrolling challenge.", script: "flappy.js", configFile: "flappy.xml", category: "arcade", isNew: true },
+  breakout: { title: "Breakout Neon", icon: "🧱", logo: "/static/icons/breakout.svg", accent: "#e879f9", description: "Smash bricks, preserve lives, and climb levels.", script: "breakout.js", configFile: "breakout.xml", category: "arcade", isNew: true },
 };
 
 const xmlParser = new XMLParser({
@@ -79,6 +79,7 @@ function gameEntries() {
     if (!merged[name]) continue;
     merged[name].title = game["@_title"] || merged[name].title;
     merged[name].icon = game["@_icon"] || merged[name].icon;
+    merged[name].logo = game["@_logo"] || merged[name].logo;
     merged[name].accent = game["@_accent"] || merged[name].accent;
     merged[name].category = String(game["@_category"] || merged[name].category);
     merged[name].description = game["@_description"] || merged[name].description;
@@ -173,6 +174,7 @@ app.get("/game/:gameName", (request, response) => {
   return response.render("game", {
     gameName,
     gameTitle: game.title,
+    gameIcon: game.logo,
     gameScript: GAME_DEFAULTS[gameName].script,
     accent: game.accent,
     platformName: platformName(),

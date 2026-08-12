@@ -176,6 +176,7 @@
           id,
           name: game.name || game.title || id,
           icon: game.icon || "🎮",
+          logo: game.logo || "",
           accent: game.accent || "#39ff14",
           description: game.description || "",
           minPlayers: Number(game.minPlayers || 2),
@@ -246,7 +247,7 @@
       card.dataset.game = game.id;
       card.style.setProperty("--accent", game.accent);
       card.innerHTML = `
-        <span class="mp-picker-icon">${escapeHtml(game.icon)}</span>
+        ${gameIconHtml(game)}
         <span class="mp-picker-name">${escapeHtml(game.name)}</span>
         <span class="mp-picker-players">${playersLabel(game)}</span>
       `;
@@ -364,7 +365,7 @@
     if (card) card.classList.add("selected");
 
     const game = state.registry[gameId];
-    picker.selected.innerHTML = `Create a room for <strong>${escapeHtml(game.icon)} ${escapeHtml(game.name)}</strong> (${playersLabel(game)}, ${game.mode === "turn-based" ? "turn-based" : "simultaneous"}).`;
+    picker.selected.innerHTML = `Create a room for <strong>${gameIconHtmlInline(game)} ${escapeHtml(game.name)}</strong> (${playersLabel(game)}, ${game.mode === "turn-based" ? "turn-based" : "simultaneous"}).`;
     picker.step2.classList.remove("hidden");
     picker.error.textContent = "";
     picker.nameInput.focus();
@@ -394,6 +395,29 @@
     const max = game.maxPlayers;
     if (min === max) return `${min} Player${min > 1 ? "s" : ""}`;
     return `${min}-${max} Players`;
+  }
+
+  /** Large icon slot (picker card). */
+  function gameIconHtml(game) {
+    return game.logo
+      ? `<img class="mp-picker-icon" src="${escapeAttr(game.logo)}" alt="" loading="lazy" />`
+      : `<span class="mp-picker-icon">${escapeHtml(game.icon)}</span>`;
+  }
+
+  /** Inline icon used inside a sentence (picker step 2). */
+  function gameIconHtmlInline(game) {
+    return game.logo
+      ? `<img class="mp-picker-icon-inline" src="${escapeAttr(game.logo)}" alt="" />`
+      : escapeHtml(game.icon);
+  }
+
+  /** Room bar / lobby icon: real logo when known, emoji as fallback. */
+  function setGameIcon(element, game) {
+    if (game?.logo) {
+      element.innerHTML = `<img src="${escapeAttr(game.logo)}" alt="" />`;
+    } else {
+      element.textContent = game?.icon || "🎮";
+    }
   }
 
   // ------------------------------------------------------------------
@@ -713,7 +737,7 @@
       setText(els.lobbyCodeDisplay, room.code);
       setText(els.lobbyGame, room.gameName || game?.name || room.gameId);
       if (els.lobbyIcon) {
-        els.lobbyIcon.textContent = game?.icon || "🎮";
+        setGameIcon(els.lobbyIcon, game);
         els.lobbyIcon.style.setProperty("--chat-accent", accent);
       }
       if (els.roomCodeInput) els.roomCodeInput.value = room.code;
@@ -724,7 +748,7 @@
       setText(els.rvCode, room.code);
       setText(els.rvGameName, room.gameName || game?.name || room.gameId);
       if (els.rvIcon) {
-        els.rvIcon.textContent = game?.icon || "🎮";
+        setGameIcon(els.rvIcon, game);
         els.rvIcon.style.setProperty("--chat-accent", accent);
       }
       setRoomStatus(room);

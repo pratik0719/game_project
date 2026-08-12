@@ -137,6 +137,13 @@
   box-shadow: 0 0 16px color-mix(in srgb, var(--chat-accent) 30%, transparent);
 }
 
+.mp-lobby-icon img {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: block;
+}
+
 .mp-lobby-game h3 {
   margin: 0.1rem 0 0;
   font-size: 1.05rem;
@@ -543,6 +550,22 @@
 .mp-picker-icon {
   font-size: 1.7rem;
   line-height: 1;
+}
+
+.mp-picker-icon img {
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  display: block;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.mp-picker-icon-inline {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  vertical-align: -4px;
+  display: inline-block;
 }
 
 .mp-picker-name {

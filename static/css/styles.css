@@ -74,8 +74,22 @@ a {
   margin: 0;
 }
 
-.brand-icon {
-  font-size: 1.3rem;
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: block;
+  box-shadow:
+    0 0 12px rgba(57, 255, 20, 0.22),
+    0 0 24px rgba(0, 229, 255, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.brand-wrap:hover .brand-logo {
+  transform: rotate(-6deg) scale(1.06);
+  box-shadow:
+    0 0 16px rgba(57, 255, 20, 0.35),
+    0 0 30px rgba(0, 229, 255, 0.2);
 }
 
 .top-nav {
@@ -229,20 +243,36 @@ a {
 }
 
 .game-thumb {
+  position: relative;
   width: 100%;
   height: 140px;
   border-radius: 18px 18px 0 0;
   overflow: hidden;
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line) 62%);
-  background: radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--accent) 20%, #0f1731 80%), #070d1a);
+  background: radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--accent) 22%, #0f1731 78%), #070d1a);
 }
 
-.game-thumb svg,
-.game-thumb canvas,
 .game-thumb img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  object-position: center;
   display: block;
+  transition: transform 0.35s ease, filter 0.35s ease;
+  will-change: transform;
+}
+
+.game-card:hover .game-thumb img {
+  transform: scale(1.07);
+  filter: brightness(1.12);
+}
+
+.game-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 52%, rgba(5, 8, 16, 0.5));
+  pointer-events: none;
 }
 
 .badge-row {
@@ -295,6 +325,21 @@ a {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+}
+
+.game-shell-title {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.game-head-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex: 0 0 auto;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .game-shell-head h2 {
@@ -782,8 +827,22 @@ canvas {
   padding: 0.85rem;
 }
 
+.lb-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.lb-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+
 .lb-card h3 {
-  margin-top: 0;
+  margin: 0;
   font-size: 1rem;
 }
 

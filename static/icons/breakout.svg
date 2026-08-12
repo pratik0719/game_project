@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <radialGradient id="bg" cx="0.32" cy="0.18" r="1.2">
+      <stop offset="0" stop-color="#2b1230"/>
+      <stop offset="1" stop-color="#0a0f1f"/>
+    </radialGradient>
+    <linearGradient id="paddle" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f472b6"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="52" fill="url(#bg)" stroke="#24304f"/>
+  <circle cx="128" cy="110" r="78" fill="#e879f9" opacity="0.1"/>
+  <g>
+    <rect x="43" y="48" width="38" height="18" rx="5" fill="#e879f9"/>
+    <rect x="87" y="48" width="38" height="18" rx="5" fill="#a78bfa"/>
+    <rect x="131" y="48" width="38" height="18" rx="5" fill="#38bdf8"/>
+    <rect x="175" y="48" width="38" height="18" rx="5" fill="#fbbf24"/>
+    <rect x="43" y="74" width="38" height="18" rx="5" fill="#a78bfa"/>
+    <rect x="87" y="74" width="38" height="18" rx="5" fill="#38bdf8"/>
+    <rect x="131" y="74" width="38" height="18" rx="5" fill="#fbbf24"/>
+    <rect x="175" y="74" width="38" height="18" rx="5" fill="#e879f9"/>
+    <rect x="43" y="100" width="38" height="18" rx="5" fill="#38bdf8"/>
+    <rect x="87" y="100" width="38" height="18" rx="5" fill="#fbbf24"/>
+    <rect x="131" y="100" width="38" height="18" rx="5" fill="#e879f9"/>
+    <rect x="175" y="100" width="38" height="18" rx="5" fill="#a78bfa"/>
+  </g>
+  <g stroke="#ffffff" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round">
+    <line x1="49" y1="52" x2="49" y2="61"/>
+    <line x1="93" y1="78" x2="93" y2="87"/>
+    <line x1="137" y1="52" x2="137" y2="61"/>
+    <line x1="181" y1="78" x2="181" y2="87"/>
+  </g>
+  <rect x="84" y="184" width="88" height="16" rx="8" fill="url(#paddle)" filter="url(#glow)"/>
+  <circle cx="142" cy="152" r="9" fill="#ffffff" filter="url(#glow)"/>
+  <circle cx="130" cy="158" r="4.5" fill="#ffffff" opacity="0.45"/>
+  <circle cx="120" cy="163" r="2.8" fill="#ffffff" opacity="0.25"/>
+</svg>

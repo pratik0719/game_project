@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <link rel="stylesheet" href="/static/css/multiplayer.css" />
   <link rel="stylesheet" href="/static/css/room-chat.css" />
@@ -20,7 +21,7 @@
 <body class="page-game" data-page="game" data-game="<%= gameName %>" style="--accent: <%= accent %>;">
   <header class="site-header">
     <div class="brand-wrap">
-      <span class="brand-icon">&#x1F579;</span>
+      <img class="brand-logo" src="/static/icons/logo.svg" alt="" width="34" height="34" />
       <h1><%= platformName %></h1>
     </div>
     <nav class="top-nav">
@@ -96,7 +97,10 @@
 
     <section class="game-shell card-surface">
       <div class="game-shell-head">
-        <h2><%= gameTitle %></h2>
+        <div class="game-shell-title">
+          <img class="game-head-icon" src="<%= gameIcon || '' %>" alt="" width="40" height="40" />
+          <h2><%= gameTitle %></h2>
+        </div>
         <p id="game-status" class="game-status">Loading game...</p>
       </div>
       <div id="game-root" class="game-root"></div>
