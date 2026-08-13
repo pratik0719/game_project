@@ -1,0 +1,159 @@
+/* ------------------------------------------------------------------
+ * Neon Connect
+ * ------------------------------------------------------------------ */
+.connect-wrap {
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+}
+
+.connect-scoreboard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.connect-score-card {
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line) 45%);
+  border-radius: 12px;
+  background: rgba(8, 13, 26, 0.78);
+  padding: 0.45rem 0.9rem;
+  text-align: center;
+  min-width: 110px;
+}
+
+.connect-score-card span {
+  display: block;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 110px;
+}
+
+.connect-score-card strong {
+  display: block;
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.4rem;
+  color: var(--accent-glow);
+}
+
+.connect-round-label {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+}
+
+.connect-board {
+  --player-color: #00e5ff;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(38px, 1fr));
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, var(--line) 40%);
+  border-radius: 16px;
+  background: linear-gradient(150deg, rgba(8, 16, 34, 0.95), rgba(13, 22, 44, 0.9));
+  box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 24%, transparent);
+  width: min(540px, 100%);
+}
+
+.connect-col {
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.connect-col:hover {
+  background: color-mix(in srgb, var(--player-color) 12%, transparent);
+}
+
+.connect-col.win-col {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.connect-cell {
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: rgba(6, 10, 20, 0.9);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(60, 90, 140, 0.35);
+}
+
+.connect-disc {
+  width: 82%;
+  height: 82%;
+  border-radius: 999px;
+  display: block;
+}
+
+.connect-disc.cyan {
+  background: radial-gradient(circle at 32% 28%, #b9f4ff, #00b8d9 55%, #007a99);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.55), inset 0 -3px 6px rgba(0, 60, 90, 0.7);
+}
+
+.connect-disc.magenta {
+  background: radial-gradient(circle at 32% 28%, #ffd0e6, #f23d8f 55%, #b81e63);
+  box-shadow: 0 0 12px rgba(255, 77, 157, 0.55), inset 0 -3px 6px rgba(90, 10, 45, 0.7);
+}
+
+.connect-disc.falling {
+  animation: connect-fall 420ms cubic-bezier(0.4, 0, 0.7, 1) both;
+  transform-origin: top center;
+}
+
+.connect-disc.win {
+  animation: connect-win-glow 700ms ease 3;
+}
+
+.connect-turn {
+  margin: 0;
+  color: var(--text-dim);
+  text-align: center;
+  min-height: 1.4rem;
+}
+
+.connect-turn.final {
+  color: var(--accent-glow);
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.05rem;
+}
+
+@keyframes connect-fall {
+  from {
+    transform: translateY(calc(-100% * var(--fall-from, 0)) translateY(-4px));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes connect-win-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 8px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 26px 6px color-mix(in srgb, var(--accent) 90%, transparent);
+  }
+}
+
+@media (max-width: 560px) {
+  .connect-board {
+    grid-template-columns: repeat(7, minmax(30px, 1fr));
+    gap: 4px;
+    padding: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connect-disc.falling,
+  .connect-disc.win {
+    animation: none;
+  }
+}

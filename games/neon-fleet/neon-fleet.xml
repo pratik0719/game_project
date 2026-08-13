@@ -1,0 +1,10 @@
+﻿<fleet>
+  <grid_size>10</grid_size>
+  <ships>
+    <ship name="carrier" size="5" label="Carrier" />
+    <ship name="battleship" size="4" label="Battleship" />
+    <ship name="cruiser" size="3" label="Cruiser" />
+    <ship name="submarine" size="3" label="Submarine" />
+    <ship name="destroyer" size="2" label="Destroyer" />
+  </ships>
+</fleet>

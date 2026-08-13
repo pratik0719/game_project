@@ -1,0 +1,11 @@
+﻿<clash>
+  <hand_size>7</hand_size>
+  <colors>
+    <color>cyan</color>
+    <color>pink</color>
+    <color>green</color>
+    <color>orange</color>
+  </colors>
+  <bot_count>1</bot_count>
+  <turn_seconds>30</turn_seconds>
+</clash>

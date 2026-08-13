@@ -83,6 +83,28 @@ async function finishMatchFor(p1, p2, roomCode, gameId, moves) {
   }
 }
 
+/**
+ * Color Clash smoke action: have whoever's turn it is draw a card (always
+ * legal) and pass if the draw leaves them with a playable pending card.
+ * Works regardless of the random hand/deck contents.
+ */
+async function colorClashAdvance(socketA, socketB, roomCode, gameId) {
+  const view = await waitForState(socketA, roomCode, (payload) => payload.gameState && Array.isArray(payload.gameState.myHand) && payload.gameState.topCard, 10000);
+  const gs = view.gameState;
+  const bySession = new Map(view.players.map((p) => [p.sessionId, p.socketId]));
+  const curSocketId = bySession.get(gs.currentTurnSession);
+  if (!curSocketId) return;
+  const cur = curSocketId === socketA.id ? socketA : socketB;
+  cur.emit("game_action", { roomCode, gameId, action: { type: "draw_card" } });
+  await sleep(250);
+  await waitForState(cur, roomCode, (payload) => payload.gameState && payload.gameState.lastEvent && payload.gameState.lastEvent.type === "draw", 8000);
+  const after = await waitForState(cur, roomCode, (payload) => payload.gameState && payload.gameState.pendingDraw === true, 8000).catch(() => null);
+  if (after) {
+    cur.emit("game_action", { roomCode, gameId, action: { type: "pass_turn" } });
+    await sleep(200);
+  }
+}
+
 function record(name, ok, detail = "") {
   results.push({ name, ok, detail });
   if (!ok) failures += 1;
@@ -201,17 +223,73 @@ async function run() {
           }
           synced = true;
           break;
+        case "simultaneous-hidden-choice":
+          if (gameId === "rps-arena") {
+            await finishMatchFor(p1, p2, roomCode, gameId, [
+              [p1, { type: "submit_choice", choice: "rock" }],
+              [p2, { type: "submit_choice", choice: "scissors" }],
+            ]);
+            synced = true;
+          }
+          break;
+        case "turn-based-shared-board":
+          if (gameId === "neon-connect") {
+            await finishMatchFor(p1, p2, roomCode, gameId, [
+              [p1, { type: "drop_disc", column: 0 }],
+              [p2, { type: "drop_disc", column: 1 }],
+            ]);
+            synced = true;
+          }
+          break;
+        case "turn-based-private-board":
+          if (gameId === "neon-fleet") {
+            const fleet = [
+              { type: "place_ship", ship: "carrier", row: 0, col: 0, horizontal: true },
+              { type: "place_ship", ship: "battleship", row: 1, col: 0, horizontal: true },
+              { type: "place_ship", ship: "cruiser", row: 2, col: 0, horizontal: true },
+              { type: "place_ship", ship: "submarine", row: 3, col: 0, horizontal: true },
+              { type: "place_ship", ship: "destroyer", row: 4, col: 0, horizontal: true },
+            ];
+            const moves = [];
+            for (const action of fleet) moves.push([p1, action]);
+            for (const action of fleet) moves.push([p2, action]);
+            moves.push([p1, { type: "placement_ready" }]);
+            moves.push([p2, { type: "placement_ready" }]);
+            moves.push([p1, { type: "attack_cell", row: 0, col: 0 }]);
+            moves.push([p2, { type: "attack_cell", row: 5, col: 5 }]);
+            await finishMatchFor(p1, p2, roomCode, gameId, moves);
+            synced = true;
+          }
+          break;
+        case "turn-based-private-hand":
+          if (gameId === "color-clash") {
+            await colorClashAdvance(p1, p2, roomCode, gameId);
+            synced = true;
+          }
+          break;
       }
       record(`${gameId}: actions accepted`, synced);
 
       // 8. Both players see shared state.
       const state1 = await waitForState(p1, roomCode, (payload) => {
         if (!payload.gameState) return false;
-        if (game.mode === "simultaneous") return payload.gameState && payload.status === "playing";
-        return payload.gameState && payload.currentTurn !== undefined && payload.status === "playing";
+        if (game.mode === "simultaneous" || game.mode === "simultaneous-hidden-choice") return payload.status === "playing";
+        return payload.currentTurn !== undefined && payload.status === "playing";
       }, 10000);
       const gameState = state1.gameState || {};
-      const hasState = Boolean(gameState) && (game.mode === "turn-based" ? gameState.board || gameState.players : gameState.playerStates || gameState.scores || gameState.pipes || gameState.activeHole !== undefined || gameState.questions);
+      const hasState =
+        Boolean(gameState) &&
+        (game.mode === "turn-based"
+          ? gameState.board || gameState.players
+          : gameState.playerStates ||
+            gameState.scores ||
+            gameState.pipes ||
+            gameState.activeHole !== undefined ||
+            gameState.questions ||
+            gameState.board ||
+            gameState.myHand ||
+            gameState.myBoard ||
+            gameState.myChoice !== undefined);
       record(`${gameId}: shared game_state broadcast`, hasState);
 
       // 9. Opponent list present.

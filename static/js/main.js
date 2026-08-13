@@ -13,6 +13,10 @@
     whackamole: "Whack-a-Mole",
     flappy: "Flappy Burst",
     breakout: "Breakout Neon",
+    "rps-arena": "RPS Arena",
+    "neon-connect": "Neon Connect",
+    "neon-fleet": "Neon Fleet",
+    "color-clash": "Color Clash",
   };
 
   const GAME_LOGOS = {
@@ -27,6 +31,10 @@
     whackamole: "/static/icons/whackamole.svg",
     flappy: "/static/icons/flappy.svg",
     breakout: "/static/icons/breakout.svg",
+    "rps-arena": "/static/icons/rps-arena.svg",
+    "neon-connect": "/static/icons/neon-connect.svg",
+    "neon-fleet": "/static/icons/neon-fleet.svg",
+    "color-clash": "/static/icons/color-clash.svg",
   };
 
   const ArcadeAPI = {

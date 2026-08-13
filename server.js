@@ -21,17 +21,21 @@ const CONFIG_FILE = path.join(BASE_DIR, "config.xml");
 const SCORES_FILE = path.join(BASE_DIR, "scores.xml");
 
 const GAME_DEFAULTS = {
-  snake: { title: "Snake Rush", icon: "🐍", logo: "/static/icons/snake.svg", accent: "#39ff14", description: "Classic arcade snake on a neon grid.", script: "snake.js", configFile: "snake.xml", category: "arcade", isNew: false },
-  memory: { title: "Memory Pulse", icon: "🧠", logo: "/static/icons/memory.svg", accent: "#00e5ff", description: "Flip cards, match pairs, and beat the clock.", script: "memory.js", configFile: "memory.xml", category: "casual", isNew: false },
-  quiz: { title: "Quiz Reactor", icon: "❓", logo: "/static/icons/quiz.svg", accent: "#ffb703", description: "Fast multiple-choice rounds with per-question timers.", script: "quiz.js", configFile: "quiz.xml", category: "casual", isNew: false },
-  tictactoe: { title: "Tic Tac Toe Grid", icon: "⭕", logo: "/static/icons/tictactoe.svg", accent: "#ff4d9d", description: "Play head-to-head or challenge the AI.", script: "tictactoe.js", configFile: "tictactoe.xml", category: "board", isNew: false },
-  spinwheel: { title: "Spin the Wheel", icon: "🎡", logo: "/static/icons/spinwheel.svg", accent: "#c084fc", description: "Spin a colorful prize wheel and stack your wins.", script: "spinwheel.js", configFile: "spinwheel.xml", category: "casual", isNew: true },
-  ludo: { title: "Ludo Blitz", icon: "🎲", logo: "/static/icons/ludo.svg", accent: "#ff6b35", description: "Race tokens home in a 2-4 player Ludo showdown.", script: "ludo.js", configFile: "ludo.xml", category: "board", isNew: true },
-  chess: { title: "Neon Chess", icon: "♞", logo: "/static/icons/chess.svg", accent: "#f0c040", description: "Classic chess with legal hints and minimax AI.", script: "chess.js", configFile: "chess.xml", category: "board", isNew: true },
-  "2048": { title: "2048 Surge", icon: "🔢", logo: "/static/icons/2048.svg", accent: "#fb923c", description: "Merge tiles, chase 2048, and beat your high score.", script: "game2048.js", configFile: "game2048.xml", category: "board", isNew: true },
-  whackamole: { title: "Whack-a-Mole", icon: "🐹", logo: "/static/icons/whackamole.svg", accent: "#4ade80", description: "Whack popping moles before the timer ends.", script: "whackamole.js", configFile: "whackamole.xml", category: "arcade", isNew: true },
-  flappy: { title: "Flappy Burst", icon: "🐤", logo: "/static/icons/flappy.svg", accent: "#38bdf8", description: "Flap through pipes in a fast side-scrolling challenge.", script: "flappy.js", configFile: "flappy.xml", category: "arcade", isNew: true },
-  breakout: { title: "Breakout Neon", icon: "🧱", logo: "/static/icons/breakout.svg", accent: "#e879f9", description: "Smash bricks, preserve lives, and climb levels.", script: "breakout.js", configFile: "breakout.xml", category: "arcade", isNew: true },
+  snake: { title: "Snake Rush", icon: "🐍", logo: "/static/icons/snake.svg", banner: "/static/images/games/snake.svg", accent: "#39ff14", description: "Classic arcade snake on a neon grid.", script: "snake.js", configFile: "snake.xml", category: "arcade", isNew: false },
+  memory: { title: "Memory Pulse", icon: "🧠", logo: "/static/icons/memory.svg", banner: "/static/images/games/memory.svg", accent: "#00e5ff", description: "Flip cards, match pairs, and beat the clock.", script: "memory.js", configFile: "memory.xml", category: "casual", isNew: false },
+  quiz: { title: "Quiz Reactor", icon: "❓", logo: "/static/icons/quiz.svg", banner: "/static/images/games/quiz.svg", accent: "#ffb703", description: "Fast multiple-choice rounds with per-question timers.", script: "quiz.js", configFile: "quiz.xml", category: "casual", isNew: false },
+  tictactoe: { title: "Tic Tac Toe Grid", icon: "⭕", logo: "/static/icons/tictactoe.svg", banner: "/static/images/games/tictactoe.svg", accent: "#ff4d9d", description: "Play head-to-head or challenge the AI.", script: "tictactoe.js", configFile: "tictactoe.xml", category: "board", isNew: false },
+  spinwheel: { title: "Spin the Wheel", icon: "🎡", logo: "/static/icons/spinwheel.svg", banner: "/static/images/games/spinwheel.svg", accent: "#c084fc", description: "Spin a colorful prize wheel and stack your wins.", script: "spinwheel.js", configFile: "spinwheel.xml", category: "casual", isNew: true },
+  ludo: { title: "Ludo Blitz", icon: "🎲", logo: "/static/icons/ludo.svg", banner: "/static/images/games/ludo.svg", accent: "#ff6b35", description: "Race tokens home in a 2-4 player Ludo showdown.", script: "ludo.js", configFile: "ludo.xml", category: "board", isNew: true },
+  chess: { title: "Neon Chess", icon: "♞", logo: "/static/icons/chess.svg", banner: "/static/images/games/chess.svg", accent: "#f0c040", description: "Classic chess with legal hints and minimax AI.", script: "chess.js", configFile: "chess.xml", category: "board", isNew: true },
+  "2048": { title: "2048 Surge", icon: "🔢", logo: "/static/icons/2048.svg", banner: "/static/images/games/2048.svg", accent: "#fb923c", description: "Merge tiles, chase 2048, and beat your high score.", script: "game2048.js", configFile: "game2048.xml", category: "board", isNew: true },
+  whackamole: { title: "Whack-a-Mole", icon: "🐹", logo: "/static/icons/whackamole.svg", banner: "/static/images/games/whackamole.svg", accent: "#4ade80", description: "Whack popping moles before the timer ends.", script: "whackamole.js", configFile: "whackamole.xml", category: "arcade", isNew: true },
+  flappy: { title: "Flappy Burst", icon: "🐤", logo: "/static/icons/flappy.svg", banner: "/static/images/games/flappy.svg", accent: "#38bdf8", description: "Flap through pipes in a fast side-scrolling challenge.", script: "flappy.js", configFile: "flappy.xml", category: "arcade", isNew: true },
+  breakout: { title: "Breakout Neon", icon: "🧱", logo: "/static/icons/breakout.svg", banner: "/static/images/games/breakout.svg", accent: "#e879f9", description: "Smash bricks, preserve lives, and climb levels.", script: "breakout.js", configFile: "breakout.xml", category: "arcade", isNew: true },
+  "rps-arena": { title: "RPS Arena", icon: "⚔️", logo: "/static/icons/rps-arena.svg", banner: "/static/images/games/rps-arena.svg", accent: "#ff4d6d", description: "Choose your move in secret and defeat your opponent in a rapid duel.", script: "rps-arena.js", configFile: "rps-arena.xml", category: "casual", isNew: true },
+  "neon-connect": { title: "Neon Connect", icon: "🔴", logo: "/static/icons/neon-connect.svg", banner: "/static/images/games/neon-connect.svg", accent: "#00e5ff", description: "Drop glowing discs and connect four before your opponent.", script: "neon-connect.js", configFile: "neon-connect.xml", category: "strategy", isNew: true },
+  "neon-fleet": { title: "Neon Fleet", icon: "🚢", logo: "/static/icons/neon-fleet.svg", banner: "/static/images/games/neon-fleet.svg", accent: "#38bdf8", description: "Deploy your fleet and destroy your opponent before they find you.", script: "neon-fleet.js", configFile: "neon-fleet.xml", category: "strategy", isNew: true },
+  "color-clash": { title: "Color Clash", icon: "🃏", logo: "/static/icons/color-clash.svg", banner: "/static/images/games/color-clash.svg", accent: "#c084fc", description: "Match colors, numbers and powers in a competitive card showdown.", script: "color-clash.js", configFile: "color-clash.xml", category: "cards", isNew: true },
 };
 
 const xmlParser = new XMLParser({
@@ -80,6 +84,7 @@ function gameEntries() {
     merged[name].title = game["@_title"] || merged[name].title;
     merged[name].icon = game["@_icon"] || merged[name].icon;
     merged[name].logo = game["@_logo"] || merged[name].logo;
+    merged[name].banner = game["@_banner"] || merged[name].banner;
     merged[name].accent = game["@_accent"] || merged[name].accent;
     merged[name].category = String(game["@_category"] || merged[name].category);
     merged[name].description = game["@_description"] || merged[name].description;
@@ -171,14 +176,19 @@ app.get("/game/:gameName", (request, response) => {
   const gameName = request.params.gameName.trim().toLowerCase();
   const game = gameEntries().find((entry) => entry.name === gameName);
   if (!game) return response.sendStatus(404);
+  // Optional per-game stylesheet (served from the game's own folder).
+  const styleFile = path.join(GAMES_DIR, gameName, `${gameName}.css`);
+  const gameStylesheet = fs.existsSync(styleFile) ? `/games/${encodeURIComponent(gameName)}/${encodeURIComponent(gameName)}.css` : null;
   return response.render("game", {
     gameName,
     gameTitle: game.title,
     gameIcon: game.logo,
+    gameBanner: game.banner,
     gameScript: GAME_DEFAULTS[gameName].script,
     accent: game.accent,
     platformName: platformName(),
     gameMultiplayerReady: Boolean(game.multiplayerReady),
+    gameStylesheet,
   });
 });
 

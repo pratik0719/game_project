@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b0a4d"/>
+      <stop offset="0.5" stop-color="#3d1040"/>
+      <stop offset="1" stop-color="#0a2b45"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.45" cy="0.45" r="0.5">
+      <stop offset="0" stop-color="#c084fc" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#c084fc" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+
+  <rect width="640" height="360" fill="url(#sky)"/>
+  <circle cx="320" cy="160" r="220" fill="url(#glow)" filter="url(#soft)"/>
+
+  <g transform="translate(180 60) rotate(-4)">
+    <g stroke="#ffffff" stroke-opacity="0.5" stroke-width="2.5">
+      <path d="M 140 0 A 140 140 0 0 0 -140 0 Z" fill="#ff4d6d"/>
+      <path d="M -140 0 A 140 140 0 0 0 0 -140 Z" fill="#ffb703"/>
+      <path d="M 0 -140 A 140 140 0 0 0 140 0 Z" fill="#00e5ff"/>
+      <path d="M 140 0 A 140 140 0 0 0 -140 0 Z" transform="rotate(90 0 0)" fill="#7aff5e"/>
+      <path d="M 140 0 A 140 140 0 0 0 -140 0 Z" transform="rotate(135 0 0)" fill="#9db4ff"/>
+      <path d="M 140 0 A 140 140 0 0 0 -140 0 Z" transform="rotate(180 0 0)" fill="#ff9dc0"/>
+      <path d="M 140 0 A 140 140 0 0 0 -140 0 Z" transform="rotate(225 0 0)" fill="#4dffd4"/>
+      <path d="M 140 0 A 140 140 0 0 0 -140 0 Z" transform="rotate(270 0 0)" fill="#ffd94d"/>
+      <path d="M 140 0 A 140 140 0 0 0 -140 0 Z" transform="rotate(315 0 0)" fill="#c084fc"/>
+    </g>
+    <g font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#ffffff">
+      <text x="0" y="-88" text-anchor="middle">10</text>
+      <text x="88" y="-8" text-anchor="middle">50</text>
+      <text x="-88" y="-8" text-anchor="middle">20</text>
+      <text x="0" y="92" text-anchor="middle">100</text>
+      <text x="-58" y="56" text-anchor="middle">5</text>
+      <text x="58" y="56" text-anchor="middle">30</text>
+    </g>
+    <g>
+      <circle cx="0" cy="0" r="34" fill="#0f0a24" stroke="#ffd94d" stroke-width="4"/>
+      <text x="0" y="12" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="#ffd94d">?</text>
+    </g>
+  </g>
+
+  <g transform="translate(348 108)">
+    <path d="M 0 0 L 26 74 L 52 0 Z" fill="#ff4d6d" filter="url(#soft)"/>
+    <path d="M 0 0 L 26 74 L 52 0 Z" fill="#ff4d6d" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2"/>
+    <circle cx="26" cy="16" r="6" fill="#ffffff" opacity="0.8"/>
+  </g>
+
+  <g font-family="Arial, sans-serif">
+    <text x="118" y="336" text-anchor="middle" font-size="20" font-weight="bold" fill="#ffd97a">$ 100</text>
+    <text x="360" y="336" text-anchor="middle" font-size="20" font-weight="bold" fill="#9dffc4">$ 250</text>
+    <text x="536" y="336" text-anchor="middle" font-size="20" font-weight="bold" fill="#9db4ff">$ 500</text>
+    <text x="250" y="330" text-anchor="middle" font-size="26" fill="#ffffff" opacity="0.9">★</text>
+    <text x="470" y="330" text-anchor="middle" font-size="26" fill="#ffffff" opacity="0.9">★</text>
+  </g>
+
+  <g fill="#ffffff" opacity="0.55">
+    <circle cx="70" cy="60" r="2.5"/><circle cx="120" cy="120" r="2"/>
+    <circle cx="560" cy="70" r="2.5"/><circle cx="600" cy="160" r="2"/>
+    <circle cx="60" cy="300" r="2.5"/><circle cx="590" cy="300" r="2"/>
+  </g>
+
+  <rect x="0" y="0" width="640" height="360" fill="none" stroke="#c084fc" stroke-opacity="0.35" stroke-width="2" rx="18"/>
+</svg>

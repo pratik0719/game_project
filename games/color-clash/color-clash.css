@@ -1,0 +1,344 @@
+/* ============================================================
+   Color Clash - neon card table
+   ============================================================ */
+
+.clash-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* ---- Opponents row ---- */
+.clash-opponents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.clash-opponent {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(10, 18, 40, 0.65);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.clash-opponent.turn {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.clash-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 28%, #101936 72%);
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.clash-opp-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.clash-opp-cards {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* ---- Center: draw + discard piles ---- */
+.clash-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+  padding: 0.6rem 0;
+}
+
+.clash-pile {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.clash-pile:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.clash-card {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.4rem;
+  height: 5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(160deg, rgba(18, 30, 60, 0.95), rgba(8, 14, 32, 0.95));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  color: var(--text-main);
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  overflow: hidden;
+  transition: transform 0.16s ease, box-shadow 0.2s ease;
+}
+
+.clash-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.clash-card.cyan::before { background: #00e5ff; }
+.clash-card.pink::before { background: #ff4d9d; }
+.clash-card.green::before { background: #39ff14; }
+.clash-card.orange::before { background: #ff9f1c; }
+.clash-card.wild::before { background: conic-gradient(#00e5ff, #ff4d9d, #39ff14, #ff9f1c, #00e5ff); }
+
+.clash-card.cyan { border-color: #00e5ff; color: #d9fbff; }
+.clash-card.pink { border-color: #ff4d9d; color: #ffe1ef; }
+.clash-card.green { border-color: #39ff14; color: #eaffd9; }
+.clash-card.orange { border-color: #ff9f1c; color: #fff1dc; }
+
+.clash-card-main {
+  font-size: 1.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.clash-card-corner {
+  position: absolute;
+  top: 0.35rem;
+  left: 0.45rem;
+  font-size: 0.7rem;
+  opacity: 0.9;
+}
+
+.clash-card-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.4rem;
+  height: 5rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, var(--line) 40%);
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--accent) 26%, #0c142e 74%),
+    color-mix(in srgb, var(--accent) 26%, #0c142e 74%) 6px,
+    #0c142e 6px,
+    #0c142e 12px
+  );
+  color: var(--accent);
+  font-size: 1.3rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.clash-card.playable {
+  cursor: pointer;
+}
+
+.clash-card.playable:hover {
+  transform: translateY(-6px) scale(1.06);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--accent) 35%, rgba(0, 0, 0, 0.55));
+}
+
+.clash-card.muted-card {
+  opacity: 0.35;
+}
+
+/* ---- Info strip ---- */
+.clash-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.clash-color-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.clash-color-chip.cyan { background: rgba(0, 229, 255, 0.22); color: #bdf4ff; }
+.clash-color-chip.pink { background: rgba(255, 77, 157, 0.22); color: #ffd7e9; }
+.clash-color-chip.green { background: rgba(57, 255, 20, 0.22); color: #d8ffc4; }
+.clash-color-chip.orange { background: rgba(255, 159, 28, 0.22); color: #ffe8c4; }
+.clash-color-chip.wild { background: rgba(255, 255, 255, 0.12); color: var(--text-main); }
+
+.clash-direction {
+  font-size: 1.1rem;
+  color: var(--text-dim);
+  min-width: 1.4rem;
+  text-align: center;
+}
+
+.clash-turn-timer-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 150px;
+}
+
+.clash-timer-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.clash-timer-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #fff));
+  transition: width 0.25s linear;
+}
+
+.clash-turn-timer-label {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  min-width: 2rem;
+}
+
+.clash-event {
+  margin: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ---- Challenge bar ---- */
+.clash-challenge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #ff4d6d 55%, transparent);
+  background: rgba(255, 77, 109, 0.1);
+  font-size: 0.9rem;
+}
+
+/* ---- Result ---- */
+.clash-result {
+  text-align: center;
+  padding: 0.8rem 1rem;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  background: rgba(10, 18, 40, 0.6);
+}
+
+.clash-result h3 {
+  margin: 0 0 0.6rem;
+  color: var(--accent);
+  font-size: 1.3rem;
+}
+
+.clash-ranking {
+  margin: 0;
+  padding-left: 1.2rem;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  display: inline-block;
+}
+
+/* ---- My hand ---- */
+.clash-hand {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.7rem 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.clash-hand .clash-card {
+  flex: 0 0 auto;
+  width: 3.6rem;
+  height: 5.3rem;
+}
+
+.clash-hand .clash-card.playable:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+/* ---- Wild color picker ---- */
+.clash-wild-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.clash-color-btn.cyan { border-color: #00e5ff; color: #bdf4ff; }
+.clash-color-btn.pink { border-color: #ff4d9d; color: #ffd7e9; }
+.clash-color-btn.green { border-color: #39ff14; color: #d8ffc4; }
+.clash-color-btn.orange { border-color: #ff9f1c; color: #ffe8c4; }
+
+.clash-last-btn {
+  animation: clash-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes clash-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); }
+  50% { box-shadow: 0 0 0 8px transparent; }
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 640px) {
+  .clash-center {
+    gap: 1rem;
+  }
+  .clash-hand {
+    justify-content: flex-start;
+  }
+  .clash-hand .clash-card {
+    width: 3rem;
+    height: 4.5rem;
+  }
+  .clash-card-main {
+    font-size: 1.2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clash-card.playable:hover,
+  .clash-last-btn {
+    animation: none;
+    transform: none;
+  }
+}

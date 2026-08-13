@@ -3,9 +3,28 @@
 const { loadXml } = require("./configLoader");
 
 const config = loadXml("memory");
-let symbols = (config.symbols || {}).symbol || [];
-if (!Array.isArray(symbols)) symbols = [symbols];
-symbols = symbols.filter(Boolean);
+
+const MODES = ["numbers", "fruits", "alphabets"];
+const defaultMode = String(config.default_mode || "numbers").trim().toLowerCase();
+
+// Fallback pools used only if the XML config is missing or malformed.
+const MODE_DEFAULTS = {
+  numbers: ["11", "23", "34", "45", "56", "67", "78", "89"],
+  fruits: ["Apple", "Banana", "Cherry", "Grapes", "Kiwi", "Lemon", "Mango", "Orange"],
+  alphabets: ["A", "B", "C", "D", "E", "F", "G", "H"],
+};
+
+/** Read one mode's value pool from the XML config (defensive parsing). */
+function poolFor(mode) {
+  const key = MODES.includes(mode) ? mode : defaultMode;
+  const raw = (config.modes || {})[key];
+  let values = raw && raw.value !== undefined ? raw.value : raw;
+  if (!Array.isArray(values)) values = values === undefined || values === null ? [] : [values];
+  const pool = values
+    .filter((value) => value !== undefined && value !== null && String(value).trim() !== "")
+    .map((value) => String(value).trim());
+  return pool.length > 0 ? pool : MODE_DEFAULTS[key] || MODE_DEFAULTS[defaultMode];
+}
 
 const PAIR_COUNT = Math.max(2, Math.min(12, Number(config.pair_count || 8)));
 const HIDE_MISMATCH_MS = 700;
@@ -22,6 +41,8 @@ const memoryHandler = {
   mode: "simultaneous",
   tickMs: HIDE_MISMATCH_MS,
   roles: ["Player 1", "Player 2"],
+  modes: MODES,
+  defaultMode: MODES.includes(defaultMode) ? defaultMode : MODES[0],
 
   createInitialState() {
     return {
@@ -46,12 +67,12 @@ const memoryHandler = {
   initializeMatch(room) {
     room.gameState.playerStates = {};
     room.players.forEach((player) => {
-      room.gameState.playerStates[player.playerNumber] = this.freshPlayerState();
+      room.gameState.playerStates[player.playerNumber] = this.freshPlayerState(room);
     });
   },
 
-  freshPlayerState() {
-    const selected = symbols.slice(0, PAIR_COUNT);
+  freshPlayerState(room) {
+    const selected = poolFor(room.mode || this.defaultMode).slice(0, PAIR_COUNT);
     const deck = this.shuffle(
       [...selected, ...selected].map((symbol, index) => ({
         id: index,

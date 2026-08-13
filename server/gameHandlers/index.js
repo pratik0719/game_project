@@ -15,6 +15,10 @@ const gameHandlers = {
   whackamole: require("./whackamole"),
   flappy: require("./flappy"),
   breakout: require("./breakout"),
+  "rps-arena": require("./rpsArena"),
+  "neon-connect": require("./neonConnect"),
+  "neon-fleet": require("./neonFleet"),
+  "color-clash": require("./colorClash"),
 };
 
 function getGameConfig(gameId) {
@@ -40,10 +44,19 @@ function listGameConfig() {
  * - select the first turn
  * - mark the room as playing
  */
-function startGame(room) {
+function startGame(room, mode) {
   const handler = getGameHandler(room.gameId);
   if (!handler) {
     return { ok: false, error: "This game does not have a multiplayer adapter." };
+  }
+  // Optional per-game content mode (e.g. memory: numbers/fruits/alphabets).
+  // Games that don't declare modes ignore it; unknown values fall back to
+  // the handler's default so the room can never end up in a bad state.
+  if (Array.isArray(handler.modes) && handler.modes.length > 0) {
+    const clean = String(mode || "").trim().toLowerCase();
+    room.mode = handler.modes.includes(clean) ? clean : handler.defaultMode || handler.modes[0];
+  } else {
+    room.mode = null;
   }
   room.gameState = handler.createInitialState();
   handler.assignRoles(room);

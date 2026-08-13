@@ -2,16 +2,20 @@
   <name>YUDY Game Arcade </name>
   <theme>dark-neon</theme>
   <games>
-    <game name="snake" title="Snake Rush" accent="#39ff14" icon="🐍" logo="/static/icons/snake.svg" category="arcade" is_new="false" />
-    <game name="memory" title="Memory Pulse" accent="#00e5ff" icon="🧠" logo="/static/icons/memory.svg" category="casual" is_new="false" />
-    <game name="quiz" title="Quiz Reactor" accent="#ffb703" icon="❓" logo="/static/icons/quiz.svg" category="casual" is_new="false" />
-    <game name="tictactoe" title="Tic Tac Toe Grid" accent="#ff4d9d" icon="⭕" logo="/static/icons/tictactoe.svg" category="board" is_new="false" />
-    <game name="spinwheel" title="Spin the Wheel" accent="#c084fc" icon="🎡" logo="/static/icons/spinwheel.svg" category="casual" is_new="true" />
-    <game name="ludo" title="Ludo Blitz" accent="#ff6b35" icon="🎲" logo="/static/icons/ludo.svg" category="board" is_new="true" />
-    <game name="chess" title="Neon Chess" accent="#f0c040" icon="♞" logo="/static/icons/chess.svg" category="board" is_new="true" />
-    <game name="2048" title="2048 Surge" accent="#fb923c" icon="🔢" logo="/static/icons/2048.svg" category="board" is_new="true" />
-    <game name="whackamole" title="Whack-a-Mole" accent="#4ade80" icon="🐹" logo="/static/icons/whackamole.svg" category="arcade" is_new="true" />
-    <game name="flappy" title="Flappy Burst" accent="#38bdf8" icon="🐤" logo="/static/icons/flappy.svg" category="arcade" is_new="true" />
-    <game name="breakout" title="Breakout Neon" accent="#e879f9" icon="🧱" logo="/static/icons/breakout.svg" category="arcade" is_new="true" />
+    <game name="snake" title="Snake Rush" accent="#39ff14" icon="🐍" logo="/static/icons/snake.svg" banner="/static/images/games/snake.svg" category="arcade" is_new="false" />
+    <game name="memory" title="Memory Pulse" accent="#00e5ff" icon="🧠" logo="/static/icons/memory.svg" banner="/static/images/games/memory.svg" category="casual" is_new="false" />
+    <game name="quiz" title="Quiz Reactor" accent="#ffb703" icon="❓" logo="/static/icons/quiz.svg" banner="/static/images/games/quiz.svg" category="casual" is_new="false" />
+    <game name="tictactoe" title="Tic Tac Toe Grid" accent="#ff4d9d" icon="⭕" logo="/static/icons/tictactoe.svg" banner="/static/images/games/tictactoe.svg" category="board" is_new="false" />
+    <game name="spinwheel" title="Spin the Wheel" accent="#c084fc" icon="🎡" logo="/static/icons/spinwheel.svg" banner="/static/images/games/spinwheel.svg" category="casual" is_new="true" />
+    <game name="ludo" title="Ludo Blitz" accent="#ff6b35" icon="🎲" logo="/static/icons/ludo.svg" banner="/static/images/games/ludo.svg" category="board" is_new="true" />
+    <game name="chess" title="Neon Chess" accent="#f0c040" icon="♞" logo="/static/icons/chess.svg" banner="/static/images/games/chess.svg" category="board" is_new="true" />
+    <game name="2048" title="2048 Surge" accent="#fb923c" icon="🔢" logo="/static/icons/2048.svg" banner="/static/images/games/2048.svg" category="board" is_new="true" />
+    <game name="whackamole" title="Whack-a-Mole" accent="#4ade80" icon="🐹" logo="/static/icons/whackamole.svg" banner="/static/images/games/whackamole.svg" category="arcade" is_new="true" />
+    <game name="flappy" title="Flappy Burst" accent="#38bdf8" icon="🐤" logo="/static/icons/flappy.svg" banner="/static/images/games/flappy.svg" category="arcade" is_new="true" />
+    <game name="breakout" title="Breakout Neon" accent="#e879f9" icon="🧱" logo="/static/icons/breakout.svg" banner="/static/images/games/breakout.svg" category="arcade" is_new="true" />
+    <game name="rps-arena" title="RPS Arena" accent="#ff4d6d" icon="⚔️" logo="/static/icons/rps-arena.svg" banner="/static/images/games/rps-arena.svg" category="casual" is_new="true" />
+    <game name="neon-connect" title="Neon Connect" accent="#00e5ff" icon="🔴" logo="/static/icons/neon-connect.svg" banner="/static/images/games/neon-connect.svg" category="strategy" is_new="true" />
+    <game name="neon-fleet" title="Neon Fleet" accent="#38bdf8" icon="🚢" logo="/static/icons/neon-fleet.svg" banner="/static/images/games/neon-fleet.svg" category="strategy" is_new="true" />
+    <game name="color-clash" title="Color Clash" accent="#c084fc" icon="🃏" logo="/static/icons/color-clash.svg" banner="/static/images/games/color-clash.svg" category="cards" is_new="true" />
   </games>
 </platform>

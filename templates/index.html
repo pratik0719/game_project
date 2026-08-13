@@ -6,7 +6,7 @@
   <title><%= platformName %> | Home</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <link rel="stylesheet" href="/static/css/multiplayer.css" />
@@ -18,27 +18,41 @@
 </head>
 <body class="page-home" data-page="home">
   <header class="site-header">
-    <div class="brand-wrap">
-      <img class="brand-logo" src="/static/icons/logo.svg" alt="" width="34" height="34" />
-      <h1><%= platformName %></h1>
-    </div>
-    <nav class="top-nav"><a class="btn btn-outline" href="/leaderboard">Leaderboard</a></nav>
+    <a class="brand-wrap" href="/" aria-label="<%= platformName %> home">
+      <img class="brand-logo" src="/static/icons/logo.svg" alt="" width="36" height="36" />
+      <span class="brand-title"><%= platformName %></span>
+    </a>
+    <nav class="top-nav">
+      <a class="btn btn-ghost" href="/leaderboard">🏆 Leaderboard</a>
+    </nav>
   </header>
 
   <main class="home-layout">
-    <section class="hero-panel card-surface">
-      <p class="eyebrow">MULTI-GAME PLATFORM</p>
-      <h2>Pick a challenge and jump in.</h2>
-      <p>Play across arcade, board, and casual games powered by XML config and Node.js APIs.</p>
-      <div class="meta-row">
-        <span class="game-count-badge"><%= gameCount %> Games Available</span>
-        <div class="filter-bar" role="tablist" aria-label="Filter games by category">
-          <button class="filter-btn active" data-filter="all">ALL</button>
-          <button class="filter-btn" data-filter="arcade">ARCADE</button>
-          <button class="filter-btn" data-filter="board">BOARD</button>
-          <button class="filter-btn" data-filter="casual">CASUAL</button>
+    <section class="hero-panel hero-panel-sm">
+      <div class="hero-copy">
+        <p class="eyebrow">MULTI-GAME PLATFORM</p>
+        <h2>Pick a challenge and <span class="grad-text">jump in.</span></h2>
+        <p>Arcade, board, and casual games — play solo or battle friends in live multiplayer rooms.</p>
+        <div class="hero-stats">
+          <span class="stat-chip"><strong><%= gameCount %></strong> games</span>
+          <span class="stat-chip"><strong>5</strong> categories</span>
+          <span class="stat-chip"><strong>∞</strong> fun</span>
         </div>
       </div>
+      <div class="hero-orb" aria-hidden="true">
+        <span class="orb orb-1"></span>
+        <span class="orb orb-2"></span>
+        <span class="orb orb-3"></span>
+      </div>
+    </section>
+
+    <section class="filter-strip" role="tablist" aria-label="Filter games by category">
+      <button class="filter-btn active" data-filter="all">ALL</button>
+      <button class="filter-btn" data-filter="arcade">ARCADE</button>
+      <button class="filter-btn" data-filter="board">BOARD</button>
+      <button class="filter-btn" data-filter="strategy">STRATEGY</button>
+      <button class="filter-btn" data-filter="cards">CARDS</button>
+      <button class="filter-btn" data-filter="casual">CASUAL</button>
     </section>
 
     <section id="multiplayer-panel" class="multiplayer-panel card-surface" data-current-game="" data-mp-ready="true">
@@ -66,6 +80,7 @@
           <button id="mp-open-picker" class="btn btn-outline" type="button">Choose Game</button>
           <button id="mp-create-room-btn" class="btn btn-primary" type="submit">Create Room</button>
           <p id="mp-create-note" class="mp-muted">Choose one of the <%= gameCount %> games to host a room. Any game can be played head-to-head.</p>
+          <p id="mp-create-error" class="mp-error" aria-live="polite"></p>
         </form>
 
         <form id="mp-join-form" class="mp-card">
@@ -114,27 +129,35 @@
       </div>
     </section>
 
-    <section class="games-grid" aria-label="Available games">
-      <% games.forEach((game) => { %>
-      <article class="game-card card-surface" style="--accent: <%= game.accent %>;" data-category="<%= game.category.toLowerCase() %>" data-game-name="<%= game.name %>">
-        <div class="game-thumb">
-          <img src="<%= game.logo %>" alt="<%= game.title %> icon" loading="lazy" />
-        </div>
-        <div class="game-card-content">
-          <div class="badge-row">
-            <span class="category-chip"><%= game.category.toUpperCase() %></span>
+    <section class="games-section">
+      <div class="section-head">
+        <h2>All Games</h2>
+        <span class="game-count-badge"><%= gameCount %> Available</span>
+      </div>
+
+      <div class="games-grid" aria-label="Available games">
+        <% games.forEach((game) => { %>
+        <article class="game-card" style="--accent: <%= game.accent %>;" data-category="<%= game.category.toLowerCase() %>" data-game-name="<%= game.name %>">
+          <div class="game-thumb">
+            <img src="<%= game.banner || game.logo %>" alt="<%= game.title %>" loading="lazy" />
+            <span class="thumb-shade" aria-hidden="true"></span>
+            <span class="thumb-category"><%= game.category.toUpperCase() %></span>
             <% if (game.isNew) { %><span class="new-badge">NEW</span><% } %>
-            <% if (game.multiplayerReady) { %><span class="new-badge mp-badge">MULTIPLAYER</span><% } %>
           </div>
-          <h3><%= game.title %></h3>
-          <p><%= game.description %></p>
-          <div class="game-card-actions">
-            <a class="btn btn-primary" href="/game/<%= encodeURIComponent(game.name) %>">Play</a>
-            <button class="btn btn-outline" type="button" data-mp-open-game="<%= game.name %>">Multiplayer</button>
+          <div class="game-card-content">
+            <div class="badge-row">
+              <h3><%= game.title %></h3>
+              <% if (game.multiplayerReady) { %><span class="new-badge mp-badge">MULTIPLAYER</span><% } %>
+            </div>
+            <p><%= game.description %></p>
+            <div class="game-card-actions">
+              <a class="btn btn-primary" href="/game/<%= encodeURIComponent(game.name) %>">▶ Play</a>
+              <button class="btn btn-outline" type="button" data-mp-open-game="<%= game.name %>">Multiplayer</button>
+            </div>
           </div>
-        </div>
-      </article>
-      <% }); %>
+        </article>
+        <% }); %>
+      </div>
     </section>
   </main>
   <div id="toast-container" class="toast-container" aria-live="polite"></div>

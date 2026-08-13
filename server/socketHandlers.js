@@ -112,7 +112,7 @@ function registerSocketHandlers(io, roomManager) {
           // A reconnecting player must be re-synced with the shared state.
           const room = roomManager.getRoom(result.roomCode);
           socket.emit("room_state", roomManager.publicRoom(room));
-          socket.emit("game_state", gameStatePayload(room));
+          socket.emit("game_state", playerGameState(room, identity.sessionId));
           socket.emit("chat_history", { roomCode: result.roomCode, messages: roomManager.getChatMessages(room) });
         }
 
@@ -152,7 +152,7 @@ function registerSocketHandlers(io, roomManager) {
         socket.join(roomCode);
         socket.emit("room_joined", { roomCode, gameId: result.room.gameId, room: result.room });
         socket.emit("room_state", result.room);
-        socket.emit("game_state", gameStatePayload(room));
+        socket.emit("game_state", playerGameState(room, sessionId.value));
         socket.emit("chat_history", { roomCode, messages: roomManager.getChatMessages(room) });
         return { ok: true, roomCode, gameId: result.room.gameId, room: result.room };
       });
@@ -174,8 +174,9 @@ function registerSocketHandlers(io, roomManager) {
         return;
       }
       const room = roomManager.getRoom(roomCode);
+      const member = room.players.find((entry) => entry.socketId === socket.id);
       socket.emit("room_state", roomManager.publicRoom(room));
-      socket.emit("game_state", gameStatePayload(room));
+      socket.emit("game_state", playerGameState(room, member?.sessionId));
     });
 
     socket.on("start_game", (payload, callback) => {
@@ -202,7 +203,9 @@ function registerSocketHandlers(io, roomManager) {
         }
 
         // Initialize ONE shared match: game state, roles, first turn, status.
-        const started = startGame(room);
+        // The optional content mode (memory card themes) is validated by the
+        // game handler itself and falls back to its default when unknown.
+        const started = startGame(room, payload?.mode);
         if (!started.ok) {
           return { success: false, message: started.error };
         }
@@ -210,7 +213,7 @@ function registerSocketHandlers(io, roomManager) {
         const publicRoom = roomManager.publicRoom(room);
         io.to(room.code).emit("game_started", gameStartedPayload(publicRoom, config));
         io.to(room.code).emit("room_state", publicRoom);
-        io.to(room.code).emit("game_state", gameStatePayload(room));
+        broadcastGameState(io, roomManager, room);
         broadcastSystemMessage(io, roomManager, room, "The match has started.");
 
         startRoomTicker(io, roomManager, room);
@@ -246,7 +249,7 @@ function registerSocketHandlers(io, roomManager) {
       roomManager.addSystemMessage(room, "A new round is starting.");
       io.to(room.code).emit("game_started", gameStartedPayload(publicRoom, getGameConfig(room.gameId)));
       io.to(room.code).emit("room_state", publicRoom);
-      io.to(room.code).emit("game_state", gameStatePayload(room));
+      broadcastGameState(io, roomManager, room);
       broadcastSystemMessage(io, roomManager, room, `Round ${room.round} started.`);
 
       startRoomTicker(io, roomManager, room);
@@ -337,7 +340,7 @@ function registerSocketHandlers(io, roomManager) {
         return;
       }
 
-      io.to(room.code).emit("game_state", gameStatePayload(room));
+      broadcastGameState(io, roomManager, room);
       if (result.finished) {
         stopRoomTicker(room.code);
         finishMatch(io, roomManager, room, result);
@@ -402,7 +405,7 @@ function startRoomTicker(io, roomManager, room) {
       return;
     }
 
-    io.to(room.code).emit("game_state", gameStatePayload(current));
+    broadcastGameState(io, roomManager, current);
   }, handler.tickMs);
 
   roomTickers.set(room.code, interval);
@@ -418,13 +421,37 @@ function stopRoomTicker(roomCode) {
 
 /** Emit the game_over event for a finished match (action- or tick-driven). */
 function finishMatch(io, roomManager, room, result) {
-  io.to(room.code).emit("game_over", {
+  const base = {
     roomCode: room.code,
     gameId: room.gameId,
     winner: result.winner ?? null,
+    winnerName: resolveWinnerName(room, result.winner),
     draw: Boolean(result.draw),
-    gameState: room.gameState,
-  });
+  };
+  const handler = getGameHandler(room.gameId);
+  if (handler && typeof handler.getPlayerState === "function" && room.gameState) {
+    // Private-state games get a personalized final snapshot (e.g. the full
+    // board is revealed once the match is over).
+    for (const player of room.players) {
+      const playerState = handler.getPlayerState(room, player.sessionId) || {};
+      io.to(player.socketId).emit("game_over", { ...base, gameState: playerState.gameState ?? null });
+    }
+    return;
+  }
+  io.to(room.code).emit("game_over", { ...base, gameState: room.gameState });
+}
+
+/**
+ * Resolve a winner (a player number, or a role such as chess "White"/
+ * "Black" or tic-tac-toe "X"/"O") to the player's display name so every
+ * client can show the same winner name. Falls back to the raw value.
+ */
+function resolveWinnerName(room, winner) {
+  if (winner === null || winner === undefined) return null;
+  const player = (room.players || []).find(
+    (entry) => entry.playerNumber === winner || entry.role === winner
+  );
+  return player ? player.name : String(winner);
 }
 
 /** game_started payload: the public room plus the game route used to open it. */
@@ -456,6 +483,35 @@ function gameStatePayload(room) {
       isConnected: player.isConnected !== false,
     })),
   };
+}
+
+/**
+ * Broadcast game_state to the whole room, personalizing it per player when
+ * the game's handler exposes getPlayerState() (private boards, hands or
+ * hidden choices). Shared-state games keep the single-room broadcast.
+ */
+function broadcastGameState(io, roomManager, room) {
+  const handler = getGameHandler(room.gameId);
+  // A match may have just ended (gameState nulled by endActiveMatch) - fall
+  // back to the shared envelope, which already tolerates a null state.
+  if (handler && typeof handler.getPlayerState === "function" && room.gameState) {
+    for (const player of room.players) {
+      const state = handler.getPlayerState(room, player.sessionId) || gameStatePayload(room);
+      io.to(player.socketId).emit("game_state", state);
+    }
+    return;
+  }
+  io.to(room.code).emit("game_state", gameStatePayload(room));
+}
+
+/** Personalized game_state for a single player (used on rejoin/resync). */
+function playerGameState(room, sessionId) {
+  if (!room) return null;
+  const handler = getGameHandler(room.gameId);
+  if (handler && typeof handler.getPlayerState === "function" && room.gameState) {
+    return handler.getPlayerState(room, sessionId) || gameStatePayload(room);
+  }
+  return gameStatePayload(room);
 }
 
 /** Add a server-created system message and broadcast it to the room. */
@@ -494,7 +550,7 @@ function handlePlayerLeave(io, roomManager, result) {
   }
   if (updatedRoom) {
     io.to(result.roomCode).emit("room_state", publicRoom);
-    io.to(result.roomCode).emit("game_state", gameStatePayload(updatedRoom));
+    broadcastGameState(io, roomManager, updatedRoom);
   }
 }
 

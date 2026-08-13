@@ -34,6 +34,7 @@
     createForm: document.getElementById("mp-create-form"),
     createRoomBtn: document.getElementById("mp-create-room-btn"),
     createNote: document.getElementById("mp-create-note"),
+    createError: document.getElementById("mp-create-error"),
     gameSelect: document.getElementById("mp-game-select"),
     joinForm: document.getElementById("mp-join-form"),
     roomCodeInput: document.getElementById("mp-room-code"),
@@ -177,6 +178,7 @@
           name: game.name || game.title || id,
           icon: game.icon || "🎮",
           logo: game.logo || "",
+          banner: game.banner || game.logo || "",
           accent: game.accent || "#39ff14",
           description: game.description || "",
           minPlayers: Number(game.minPlayers || 2),
@@ -356,6 +358,9 @@
     picker.modal.classList.remove("hidden");
     picker.modal.setAttribute("aria-hidden", "false");
     state.pickerOpen = true;
+    // Pre-selected games (e.g. a Multiplayer button on a game card) also
+    // jump straight to the confirmation step without extra scrolling.
+    scrollPickerToConfirm();
   }
 
   function selectPickerGame(gameId) {
@@ -369,6 +374,24 @@
     picker.step2.classList.remove("hidden");
     picker.error.textContent = "";
     picker.nameInput.focus();
+    scrollPickerToConfirm();
+  }
+
+  /**
+   * Keep the Create Room confirmation visible inside the modal after a
+   * game is chosen, so the player never has to scroll to confirm.
+   */
+  function scrollPickerToConfirm() {
+    if (!picker || !picker.step2 || picker.step2.classList.contains("hidden")) return;
+    requestAnimationFrame(() => {
+      const box = picker.modal.querySelector(".mp-picker-box");
+      if (!box) return;
+      const stepRect = picker.step2.getBoundingClientRect();
+      const boxRect = box.getBoundingClientRect();
+      if (stepRect.bottom > boxRect.bottom) {
+        box.scrollTop += stepRect.bottom - boxRect.bottom + 12;
+      }
+    });
   }
 
   function pickerName() {
@@ -397,10 +420,11 @@
     return `${min}-${max} Players`;
   }
 
-  /** Large icon slot (picker card). */
+  /** Large image slot (picker card): rich banner art, icon as fallback. */
   function gameIconHtml(game) {
-    return game.logo
-      ? `<img class="mp-picker-icon" src="${escapeAttr(game.logo)}" alt="" loading="lazy" />`
+    const src = game.banner || game.logo;
+    return src
+      ? `<img class="mp-picker-icon" src="${escapeAttr(src)}" alt="" loading="lazy" />`
       : `<span class="mp-picker-icon">${escapeHtml(game.icon)}</span>`;
   }
 
@@ -451,14 +475,19 @@
       state.mpStarting = false;
       applyRoom(data);
       openRoomGame(data?.gameId, data?.code, data?.gameRoute);
+      hideWinnerPopup();
       emitLocal("game_started", data);
     });
     state.socket.on("game_state", (payload) => {
       syncRoomFromGameState(payload);
       emitLocal("game_state", payload);
     });
-    state.socket.on("game_over", (payload) => emitLocal("game_over", payload));
+    state.socket.on("game_over", (payload) => {
+      emitLocal("game_over", payload);
+      showWinnerPopup(payload);
+    });
     state.socket.on("match_ended", (payload) => {
+      hideWinnerPopup();
       if (payload?.room) applyRoom(payload.room);
       emitLocal("match_ended", payload);
     });
@@ -466,6 +495,103 @@
       setError(payload?.error || "Room action failed.");
       emitLocal("room_error", payload);
     });
+  }
+
+  // ------------------------------------------------------------------
+  // Winner popup: shown to EVERY player in the room when a match ends, so
+  // everyone sees the same winner name. Dismissed manually, by clicking
+  // the backdrop, or automatically when a new match starts.
+  // ------------------------------------------------------------------
+
+  let winnerPopup = null;
+
+  function showWinnerPopup(payload) {
+    if (!payload || !state.room) return;
+    // Only the room's own game page should show it (ignore stale events if
+    // the player ended up on a different game page).
+    if (payload.gameId && state.currentGame && payload.gameId !== state.currentGame) return;
+    ensureWinnerPopup();
+    // The server can re-emit game_over for the same finished match (e.g. a
+    // late game_action); don't replay the entrance animation for it.
+    if (!winnerPopup.classList.contains("hidden")) return;
+
+    const isDraw = Boolean(payload.draw);
+    const winnerName = payload.winnerName || localWinnerName(payload.winner);
+    const isMeWinner = Boolean(
+      !isDraw &&
+        me() &&
+        (payload.winner === me().playerNumber || payload.winner === me().role)
+    );
+
+    const trophy = winnerPopup.querySelector(".mp-winner-trophy");
+    const eyebrow = winnerPopup.querySelector(".mp-winner-eyebrow");
+    const title = winnerPopup.querySelector(".mp-winner-title");
+    const name = winnerPopup.querySelector(".mp-winner-name");
+    const sub = winnerPopup.querySelector(".mp-winner-sub");
+    const closeBtn = winnerPopup.querySelector(".mp-winner-close");
+
+    if (isDraw) {
+      trophy.textContent = "🤝";
+      eyebrow.textContent = "MATCH COMPLETE";
+      title.textContent = "DRAW";
+      name.textContent = "It's a tie!";
+      sub.textContent = "Neither player takes the crown this time.";
+      closeBtn.textContent = "OK";
+    } else {
+      trophy.textContent = "🏆";
+      eyebrow.textContent = "MATCH COMPLETE";
+      title.textContent = "WINNER";
+      name.textContent = winnerName || "Unknown player";
+      sub.textContent = isMeWinner ? "That's you - well played!" : "takes the crown!";
+      closeBtn.textContent = "Nice!";
+    }
+
+    winnerPopup.classList.remove("hidden");
+    winnerPopup.setAttribute("aria-hidden", "false");
+  }
+
+  function hideWinnerPopup() {
+    if (!winnerPopup) return;
+    winnerPopup.classList.add("hidden");
+    winnerPopup.setAttribute("aria-hidden", "true");
+  }
+
+  /** Resolve a winner (player number or role) to a name as a fallback. */
+  function localWinnerName(winner) {
+    if (winner === null || winner === undefined) return "";
+    const player = (state.room?.players || []).find(
+      (entry) => entry.playerNumber === winner || entry.role === winner
+    );
+    if (player) return player.name;
+    // The winner's player may have left the room - fall back gracefully.
+    return typeof winner === "number" ? `Player ${winner}` : String(winner);
+  }
+
+  function ensureWinnerPopup() {
+    if (winnerPopup) return;
+    winnerPopup = document.createElement("div");
+    winnerPopup.className = "modal mp-winner-modal hidden";
+    winnerPopup.setAttribute("aria-hidden", "true");
+    winnerPopup.innerHTML = `
+      <div class="modal-card card-surface mp-winner-card" role="dialog" aria-modal="true" aria-labelledby="mp-winner-title">
+        <span class="mp-winner-trophy" aria-hidden="true">🏆</span>
+        <p class="eyebrow mp-winner-eyebrow">MATCH COMPLETE</p>
+        <h3 id="mp-winner-title" class="mp-winner-title">WINNER</h3>
+        <p class="mp-winner-name">Player</p>
+        <p class="mp-winner-sub">takes the crown!</p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-primary mp-winner-close">Nice!</button>
+        </div>
+      </div>
+    `;
+    winnerPopup.querySelector(".mp-winner-close").addEventListener("click", hideWinnerPopup);
+    winnerPopup.addEventListener("click", (event) => {
+      if (event.target === winnerPopup) hideWinnerPopup();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") hideWinnerPopup();
+    });
+    document.body.appendChild(winnerPopup);
   }
 
   function bindForms() {
@@ -493,14 +619,17 @@
       if (!gameId) {
         gameId = state.selectedGameId || (els.gameSelect?.value || "").trim().toLowerCase();
         if (!gameId) {
-          setError("No game selected. Open the game chooser and pick one first.");
+          // Show the error right next to the Choose Game button and open the
+          // picker so the player can fix it without hunting for the button.
+          setCreateError("No game selected. Choose a game below to create a room.");
           if (els.createRoomBtn) els.createRoomBtn.disabled = false;
+          openCreateRoomModal("");
           return;
         }
       }
 
       createRoom(gameId, name, (error) => {
-        if (error) setError(error);
+        if (error) setCreateError(error);
       });
     });
 
@@ -517,7 +646,11 @@
       state.mpStarting = true; // prevent double clicks while the match starts
       updateStartGameButton(state.room);
       // The server reads the selected game from the room - never send gameId here.
-      state.socket.timeout(5000).emit("start_game", { roomCode: state.room.code }, (error, response) => {
+      // Games may expose an optional content mode (e.g. memory card themes)
+      // through a [data-mp-mode] element; the server validates and defaults it.
+      const modeElement = document.querySelector("[data-mp-mode]");
+      const mode = modeElement ? modeElement.getAttribute("data-mp-mode") : undefined;
+      state.socket.timeout(5000).emit("start_game", { roomCode: state.room.code, mode }, (error, response) => {
         if (error || !response || response.success !== true) {
           state.mpStarting = false;
           setError((response && (response.message || response.error)) || "Unable to start the game.");
@@ -557,6 +690,7 @@
         if (els.roomCodeInput) els.roomCodeInput.value = result.roomCode;
         applyRoom(result.room);
         setError("");
+        setCreateError("");
         toast("Room created.", "success");
         openRoomGame(result.room?.gameId, result.roomCode);
       }
@@ -716,6 +850,7 @@
   function renderRoom(room) {
     state.room = room;
     if (!room) {
+      hideWinnerPopup();
       els.lobby?.classList.add("hidden");
       els.rvRoot?.classList.add("hidden");
       document.body.classList.remove("in-room");
@@ -964,6 +1099,11 @@
 
   function setError(message) {
     setText(els.actionError, message);
+    if (message) toast(message, "error");
+  }
+
+  function setCreateError(message) {
+    setText(els.createError, message);
     if (message) toast(message, "error");
   }
 

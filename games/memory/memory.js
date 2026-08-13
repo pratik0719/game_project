@@ -17,12 +17,27 @@
     return;
   }
 
-  const symbolContainer = config.symbols || {};
-  let symbols = symbolContainer.symbol || [];
-  if (!Array.isArray(symbols)) {
-    symbols = [symbols];
-  }
-  symbols = symbols.filter(Boolean);
+  // Card content is organised into three pickable modes: numbers (max two
+  // digits), fruit names and alphabet letters. The pools come from the XML
+  // config so single-player and multiplayer always use the same content.
+  const MODES = ["numbers", "fruits", "alphabets"];
+  const MODE_LABELS = { numbers: "Numbers", fruits: "Fruits", alphabets: "Alphabets" };
+  const MODE_DEFAULTS = {
+    numbers: ["11", "23", "34", "45", "56", "67", "78", "89"],
+    fruits: ["Apple", "Banana", "Cherry", "Grapes", "Kiwi", "Lemon", "Mango", "Orange"],
+    alphabets: ["A", "B", "C", "D", "E", "F", "G", "H"],
+  };
+  const defaultMode = String(config.default_mode || "numbers").trim().toLowerCase();
+  const modePools = {};
+  MODES.forEach((mode) => {
+    const raw = (config.modes || {})[mode];
+    let values = raw && raw.value !== undefined ? raw.value : raw;
+    if (!Array.isArray(values)) values = values === undefined || values === null ? [] : [values];
+    const pool = values
+      .filter((value) => value !== undefined && value !== null && String(value).trim() !== "")
+      .map((value) => String(value).trim());
+    modePools[mode] = pool.length > 0 ? pool : MODE_DEFAULTS[mode];
+  });
 
   const pairCount = Math.max(2, Number(config.pair_count || 8));
   const timeBonus = Number(config.time_bonus || 300);
@@ -53,6 +68,8 @@
   let seconds = 0;
   let timerId = null;
   let timerStarted = false;
+  let cardMode = MODES.includes(defaultMode) ? defaultMode : "numbers";
+  let roundActive = false;
 
   function onMpStatus(status) {
     if (status === "solo") exitMultiplayer();
@@ -107,16 +124,28 @@
       if (initialRoom.status === "playing" && initialRoom.gameState) enterMpMatch();
       else enterMpWaiting();
     } else {
-      startRound();
+      enterSoloPick();
     }
   } else {
-    startRound();
+    enterSoloPick();
   }
 
-  // ---------- Single-player mode (unchanged behavior) ----------
+  // ---------- Single-player mode ----------
+
+  function enterSoloPick() {
+    roundActive = false;
+    if (timerId) {
+      window.clearInterval(timerId);
+      timerId = null;
+    }
+    timerStarted = false;
+    statusEl.textContent = "Choose a card mode to start the game.";
+    root.innerHTML = '<p class="mp-muted">Pick Numbers, Fruits or Alphabets above to start.</p>';
+    renderControls();
+  }
 
   function startRound() {
-    const selected = symbols.slice(0, pairCount);
+    const selected = (modePools[cardMode] || []).slice(0, pairCount);
     const doubled = [...selected, ...selected].map((symbol, index) => ({
       id: index,
       symbol,
@@ -131,19 +160,40 @@
     moves = 0;
     seconds = 0;
     timerStarted = false;
+    roundActive = true;
 
     if (timerId) {
       window.clearInterval(timerId);
       timerId = null;
     }
 
-    statusEl.textContent = "Find all matching pairs.";
+    statusEl.textContent = `Find all matching pairs - ${MODE_LABELS[cardMode]} mode.`;
     render();
     renderControls();
   }
 
   function renderControls() {
     controls.innerHTML = "";
+
+    const modeWrap = document.createElement("div");
+    modeWrap.className = "mode-switch";
+    MODES.forEach((mode) => {
+      const modeBtn = document.createElement("button");
+      modeBtn.type = "button";
+      modeBtn.className = "btn btn-outline";
+      modeBtn.textContent = MODE_LABELS[mode];
+      if (mode === cardMode) modeBtn.classList.add("active");
+      modeBtn.addEventListener("click", () => {
+        cardMode = mode;
+        startRound();
+      });
+      modeWrap.appendChild(modeBtn);
+    });
+    controls.appendChild(modeWrap);
+
+    if (!roundActive) {
+      return;
+    }
 
     const stats = document.createElement("div");
     stats.className = "game-hud";
@@ -357,6 +407,39 @@
     bar.className = "mp-match-bar";
     controls.appendChild(bar);
     if (mpSupport) mpSupport.renderMatchBar(bar);
+
+    if (mpWaiting) {
+      // The card mode is chosen before the match starts. The host's current
+      // selection travels with the start_game event (read from this element).
+      const modeWrap = document.createElement("div");
+      modeWrap.className = "mode-switch";
+      modeWrap.dataset.mpMode = cardMode;
+      MODES.forEach((mode) => {
+        const modeBtn = document.createElement("button");
+        modeBtn.type = "button";
+        modeBtn.className = "btn btn-outline";
+        modeBtn.textContent = MODE_LABELS[mode];
+        if (mode === cardMode) modeBtn.classList.add("active");
+        modeBtn.addEventListener("click", () => {
+          cardMode = mode;
+          renderMpControls();
+        });
+        modeWrap.appendChild(modeBtn);
+      });
+      controls.appendChild(modeWrap);
+
+      const room = mpSupport ? mpSupport.getRoom() : null;
+      const me = mpSupport ? mpSupport.me() : null;
+      const isHost = Boolean(room && me && room.hostId === me.socketId);
+      const note = document.createElement("p");
+      note.className = "mp-muted";
+      note.textContent = isHost
+        ? `Pick the card mode (${MODE_LABELS[cardMode]} selected), then press Start Game.`
+        : "The host picks the card mode before starting.";
+      controls.appendChild(note);
+      return;
+    }
+
     if (mpSupport) mpSupport.renderPlayAgainButton(controls, mpPlaying && Boolean(mpResult));
 
     if (mpPlaying && mpResult) {
@@ -382,10 +465,10 @@
     mpPlaying = false;
     mpResult = null;
     controls.innerHTML = "";
-    startRound();
+    enterSoloPick();
   }
 
   // Start the local game only when we are not inside a multiplayer room.
-  if (!mpWaiting && !mpPlaying) startRound();
+  if (!mpWaiting && !mpPlaying) enterSoloPick();
 })();
 

@@ -240,6 +240,7 @@ class RoomManager {
       gameName: room.gameName || room.gameTitle,
       gameTitle: room.gameTitle,
       gameMode: room.gameMode || null,
+      mode: room.mode || null,
       hostId: room.hostId,
       status: room.status,
       players: room.players.map(publicPlayer),

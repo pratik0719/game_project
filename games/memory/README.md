@@ -58,16 +58,10 @@
 | `difficulty` | `value` | Config value `difficulty`. |
 | `pair_count` | `value` | Config value `pair_count`. |
 | `time_bonus` | `value` | Config value `time_bonus`. |
-| `symbols/symbol` | `value` | Nested value under `symbols`. |
-| `symbols/symbol` | `value` | Nested value under `symbols`. |
-| `symbols/symbol` | `value` | Nested value under `symbols`. |
-| `symbols/symbol` | `value` | Nested value under `symbols`. |
-| `symbols/symbol` | `value` | Nested value under `symbols`. |
-| `symbols/symbol` | `value` | Nested value under `symbols`. |
-| `symbols/symbol` | `value` | Nested value under `symbols`. |
-| `symbols/symbol` | `value` | Nested value under `symbols`. |
-| `symbols/symbol` | `value` | Nested value under `symbols`. |
-| `symbols/symbol` | `value` | Nested value under `symbols`. |
+| `default_mode` | `value` | Card mode used when the player does not pick one (`numbers`). |
+| `modes/numbers/value` | `value` | Numbers pool (max two digits). |
+| `modes/fruits/value` | `value` | Fruit name pool. |
+| `modes/alphabets/value` | `value` | Alphabet letter pool. |
 
 ### Default XML Values
 ```xml
@@ -75,18 +69,39 @@
   <difficulty>medium</difficulty>
   <pair_count>8</pair_count>
   <time_bonus>300</time_bonus>
-  <symbols>
-    <symbol>&#x1F680;</symbol>
-    <symbol>&#x1F3AE;</symbol>
-    <symbol>&#x1F579;</symbol>
-    <symbol>&#x1F47E;</symbol>
-    <symbol>&#x26A1;</symbol>
-    <symbol>&#x1F48E;</symbol>
-    <symbol>&#x1F525;</symbol>
-    <symbol>&#x1F31F;</symbol>
-    <symbol>&#x1F3AF;</symbol>
-    <symbol>&#x1F9E9;</symbol>
-  </symbols>
+  <default_mode>numbers</default_mode>
+  <modes>
+    <numbers>
+      <value>11</value>
+      <value>23</value>
+      <value>34</value>
+      <value>45</value>
+      <value>56</value>
+      <value>67</value>
+      <value>78</value>
+      <value>89</value>
+    </numbers>
+    <fruits>
+      <value>Apple</value>
+      <value>Banana</value>
+      <value>Cherry</value>
+      <value>Grapes</value>
+      <value>Kiwi</value>
+      <value>Lemon</value>
+      <value>Mango</value>
+      <value>Orange</value>
+    </fruits>
+    <alphabets>
+      <value>A</value>
+      <value>B</value>
+      <value>C</value>
+      <value>D</value>
+      <value>E</value>
+      <value>F</value>
+      <value>G</value>
+      <value>H</value>
+    </alphabets>
+  </modes>
 </memory>
 ```
 

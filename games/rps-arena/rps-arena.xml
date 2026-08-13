@@ -1,0 +1,5 @@
+﻿<rps>
+  <rounds_to_win>3</rounds_to_win>
+  <choice_seconds>15</choice_seconds>
+  <ai_difficulty>medium</ai_difficulty>
+</rps>

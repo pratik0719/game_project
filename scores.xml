@@ -1,2 +1,30 @@
-<?xml version='1.0' encoding='utf-8'?>
-<scores><game name="snake" /><game name="memory" /><game name="quiz" /><game name="tictactoe"><entry><player>pratik</player><score>100</score><timestamp>2026-08-12T14:37:36+00:00</timestamp><meta><mode>ai</mode><result>X</result><difficulty>medium</difficulty></meta></entry></game><game name="spinwheel" /><game name="ludo" /><game name="chess" /><game name="2048" /><game name="whackamole" /><game name="flappy" /><game name="breakout" /></scores>
+<?xml version="1.0" encoding="utf-8"?>
+<scores>
+  <game name="snake"></game>
+  <game name="memory"></game>
+  <game name="quiz"></game>
+  <game name="tictactoe">
+    <entry>
+      <player>pratik</player>
+      <score>100</score>
+      <timestamp>2026-08-12T14:37:36+00:00</timestamp>
+      <meta>
+        <mode>ai</mode>
+        <result>X</result>
+        <difficulty>medium</difficulty>
+      </meta>
+    </entry>
+  </game>
+  <game name="spinwheel"></game>
+  <game name="ludo"></game>
+  <game name="chess"></game>
+  <game name="2048"></game>
+  <game name="whackamole"></game>
+  <game name="flappy"></game>
+  <game name="breakout"></game>
+  <game name="rps-arena"></game>
+  <game name="neon-connect"></game>
+  <game name="neon-fleet"></game>
+  <game name="color-clash"></game>
+</scores>
+

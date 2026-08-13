@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -6,27 +6,29 @@
   <title><%= platformName %> | <%= gameTitle %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <link rel="stylesheet" href="/static/css/multiplayer.css" />
   <link rel="stylesheet" href="/static/css/room-chat.css" />
+  <% if (gameStylesheet) { %><link rel="stylesheet" href="<%= gameStylesheet %>" /><% } %>
   <script defer src="/static/js/main.js"></script>
   <script defer src="/socket.io/socket.io.js"></script>
   <script defer src="/static/js/room-chat.js"></script>
   <script defer src="/static/js/multiplayer.js"></script>
   <script defer src="/static/js/mp-game.js"></script>
+  <script defer src="/static/js/sfx.js"></script>
   <script defer src="/games/<%= encodeURIComponent(gameName) %>/<%= encodeURIComponent(gameScript) %>"></script>
 </head>
 <body class="page-game" data-page="game" data-game="<%= gameName %>" style="--accent: <%= accent %>;">
   <header class="site-header">
-    <div class="brand-wrap">
-      <img class="brand-logo" src="/static/icons/logo.svg" alt="" width="34" height="34" />
-      <h1><%= platformName %></h1>
-    </div>
+    <a class="brand-wrap" href="/" aria-label="<%= platformName %> home">
+      <img class="brand-logo" src="/static/icons/logo.svg" alt="" width="36" height="36" />
+      <span class="brand-title"><%= platformName %></span>
+    </a>
     <nav class="top-nav">
-      <a class="btn btn-outline" href="/">Home</a>
-      <a class="btn btn-outline" href="/leaderboard">Leaderboard</a>
+      <a class="btn btn-ghost" href="/">Home</a>
+      <a class="btn btn-ghost" href="/leaderboard">🏆 Leaderboard</a>
     </nav>
   </header>
 
@@ -56,6 +58,7 @@
           <button id="mp-create-room-btn" class="btn btn-primary" type="submit" <%= gameMultiplayerReady ? "" : "disabled" %>>Create Room</button>
           <button id="mp-open-picker" class="btn btn-outline" type="button">Change Game</button>
           <p id="mp-create-note" class="mp-muted" <%= gameMultiplayerReady ? "hidden" : "" %>>Multiplayer for this game is coming soon. You can still join any room from here.</p>
+          <p id="mp-create-error" class="mp-error" aria-live="polite"></p>
         </form>
 
         <form id="mp-join-form" class="mp-card">
@@ -96,12 +99,16 @@
     </section>
 
     <section class="game-shell card-surface">
-      <div class="game-shell-head">
-        <div class="game-shell-title">
-          <img class="game-head-icon" src="<%= gameIcon || '' %>" alt="" width="40" height="40" />
-          <h2><%= gameTitle %></h2>
+      <div class="game-banner">
+        <img class="game-banner-img" src="<%= gameBanner || gameIcon || '' %>" alt="" loading="lazy" />
+        <span class="game-banner-tint" aria-hidden="true"></span>
+        <div class="game-shell-head">
+          <div class="game-shell-title">
+            <img class="game-head-icon" src="<%= gameIcon || '' %>" alt="" width="40" height="40" />
+            <h2><%= gameTitle %></h2>
+          </div>
+          <p id="game-status" class="game-status">Loading game...</p>
         </div>
-        <p id="game-status" class="game-status">Loading game...</p>
       </div>
       <div id="game-root" class="game-root"></div>
       <div id="game-controls" class="game-controls"></div>
