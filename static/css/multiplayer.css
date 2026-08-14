@@ -7,6 +7,36 @@
   margin-top: 1.3rem;
 }
 
+/* ------------------------------------------------------------------
+ * Mobile bottom sheet (desktop keeps the three-card grid untouched).
+ * ------------------------------------------------------------------ */
+
+.mp-play-online {
+  display: none;
+}
+
+.mp-mobile-sheet {
+  position: static;
+}
+
+.mp-sheet-backdrop {
+  display: none;
+}
+
+.mp-sheet-tabs {
+  display: none;
+}
+
+/* The game picker must stay above the sheet (it opens from inside it). */
+#mp-picker-modal {
+  z-index: 48;
+}
+
+/* Prevent background scroll while the sheet is open. */
+body.sheet-open {
+  overflow: hidden;
+}
+
 .multiplayer-head,
 .mp-lobby-head {
   display: flex;
@@ -29,8 +59,20 @@
 .mp-status {
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 0.28rem 0.58rem;
+  padding: 0.28rem 0.6rem;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mp-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  margin-right: 0.4rem;
+  background: var(--text-dim);
+  flex: 0 0 auto;
 }
 
 .mp-status.online {
@@ -38,9 +80,19 @@
   color: #8dffbd;
 }
 
+.mp-status.online::before {
+  background: #33d17a;
+  box-shadow: 0 0 8px rgba(51, 209, 122, 0.8);
+}
+
 .mp-status.offline {
   border-color: var(--danger);
   color: #ff9aac;
+}
+
+.mp-status.offline::before {
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(255, 77, 109, 0.8);
 }
 
 .mp-grid {
@@ -48,15 +100,74 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
+  align-items: stretch;
 }
 
+/* The three cards stretch to the tallest column; each is a column flex so
+ * its actions/errors can pin to the bottom instead of floating mid-card. */
 .mp-card {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(8, 13, 26, 0.58);
   padding: 0.8rem;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
+}
+
+.mp-card .mp-error {
+  margin-top: auto;
+}
+
+/* Paired buttons inside a card (e.g. Choose Game + Create Room). */
+.mp-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.mp-card-actions .btn {
+  flex: 1 1 0;
+  min-height: 40px;
+}
+
+/* Selected game chip inside the Create Room card. */
+.mp-create-selected {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line) 45%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, rgba(8, 13, 26, 0.7));
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.mp-create-selected.hidden {
+  display: none;
+}
+
+.mp-create-selected img {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.mp-create-selected .mp-create-selected-icon {
+  font-size: 1.1rem;
+  flex: 0 0 auto;
+}
+
+.mp-create-selected span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mp-card label,
@@ -85,8 +196,7 @@
 
 .mp-card input:focus,
 .mp-card select:focus,
-.mp-chat input:focus,
-.btn:focus-visible {
+.mp-chat input:focus {
   border-color: var(--accent-glow);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
 }
@@ -95,6 +205,15 @@
   min-height: 1.2rem;
   margin: 0;
   color: #ff9aac;
+  font-weight: 600;
+}
+
+/* Only visible (non-empty) errors get the alert treatment. */
+.mp-error:not(:empty) {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(255, 77, 109, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 77, 109, 0.08);
 }
 
 /* ------------------------------------------------------------------
@@ -162,7 +281,7 @@
 .mp-lobby-body {
   margin-top: 1rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) var(--chat-width);
   gap: 1rem;
   align-items: start;
 }
@@ -208,6 +327,19 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+.mp-actions .btn {
+  min-height: 40px;
+}
+
+/* Start Game: glow once it's actually clickable. */
+#mp-start-game:not(:disabled) {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+#mp-start-game:not(:disabled):hover {
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 .mp-code-box {
@@ -331,12 +463,16 @@
 .mp-host-badge {
   color: var(--accent-glow);
   font-family: "Orbitron", sans-serif;
-  font-size: 0.72rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, var(--line) 40%);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, var(--line) 30%);
   border-radius: 999px;
-  padding: 0.12rem 0.42rem;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  padding: 0.14rem 0.46rem;
   margin-left: auto;
   white-space: nowrap;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .mp-player-chips .mp-host-badge {
@@ -387,7 +523,7 @@
 
 .page-game.in-room .game-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) var(--chat-width);
   grid-template-areas:
     "room room"
     "game chat";
@@ -470,18 +606,6 @@
 
 .mp-muted {
   margin: 0;
-}
-
-.game-card-actions {
-  margin-top: auto;
-  display: flex;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-}
-
-.game-card-actions .btn {
-  flex: 1 1 auto;
-  text-align: center;
 }
 
 /* ------------------------------------------------------------------
@@ -728,19 +852,136 @@
  * Responsive
  * ------------------------------------------------------------------ */
 
-@media (max-width: 1080px) {
+@media (max-width: 1023px) {
   .page-game.in-room .game-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) var(--chat-width-narrow);
   }
 
   .mp-lobby-body {
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) var(--chat-width-narrow);
   }
 }
 
-@media (max-width: 900px) {
-  .mp-grid {
+@media (max-width: 767px) {
+  /* One Play Online button replaces the stacked forms. */
+  .mp-play-online {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+  }
+
+  /* Bottom sheet: slides up from the phone's bottom edge. */
+  .mp-mobile-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    /* multiplayer.js lifts the sheet above the software keyboard. */
+    bottom: calc(var(--sheet-keyboard-inset, 0px));
+    z-index: 45;
+    transform: translateY(105%);
+    transition: transform 0.24s ease;
+    pointer-events: none;
+  }
+
+  .mp-mobile-sheet.open {
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .mp-sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background: rgba(8, 11, 20, 0.62);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+
+  /* The backdrop must not sit above the sheet panel. */
+  .mp-mobile-sheet:not(.open) .mp-sheet-backdrop {
+    display: none;
+  }
+
+  .mp-sheet-panel {
+    position: relative;
+    z-index: 2;
+    /* 84vh bottom sheet; multiplayer.js caps it to the visible viewport
+     * (keyboard open, browser chrome) via --sheet-vv-height. */
+    max-height: min(84vh, 620px);
+    max-height: min(var(--sheet-vv-height, 100vh), 84vh, 620px);
+    overflow-y: auto;
+    padding: 0.9rem 1rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
+    border-radius: 18px 18px 0 0;
+    border: 1px solid var(--line);
+    border-bottom: none;
+    background: linear-gradient(160deg, rgba(15, 21, 38, 0.99), rgba(10, 15, 30, 0.99));
+    box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .mp-sheet-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+  }
+
+  .mp-sheet-head h3 {
+    margin: 0.25rem 0 0;
+  }
+
+  .mp-sheet-close {
+    flex: 0 0 auto;
+    line-height: 1;
+    font-size: 1.2rem;
+    padding: 0.45rem 0.8rem;
+    min-height: 44px;
+  }
+
+  .mp-sheet-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    margin-top: 0.85rem;
+    padding: 0.3rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(8, 13, 26, 0.6);
+  }
+
+  .mp-sheet-tab {
+    min-height: 44px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: "Orbitron", sans-serif;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+  }
+
+  .mp-sheet-tab.active {
+    background: var(--accent);
+    color: #0d1222;
+  }
+
+  /* Only the active tab's form is shown (name card stays visible). */
+  .mp-mobile-sheet:not(.sheet-mode-join) #mp-join-form,
+  .mp-mobile-sheet.sheet-mode-join #mp-create-form {
+    display: none;
+  }
+
+  .mp-mobile-sheet .mp-grid {
     grid-template-columns: 1fr;
+    margin-top: 0.85rem;
   }
 
   .multiplayer-head,
@@ -752,12 +993,31 @@
     align-items: flex-start;
   }
 
-  .mp-actions {
-    justify-content: flex-start;
+  .mp-lobby-head .mp-code-box {
+    width: 100%;
+    min-width: 0;
   }
 
   .mp-lobby-body {
     grid-template-columns: 1fr;
+  }
+
+  /* Room actions: full-width stack, Start Game first for the host. */
+  .mp-actions {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .mp-actions .btn {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 48px;
+    text-align: center;
+  }
+
+  #mp-start-game {
+    order: -1;
   }
 
   .page-game.in-room .game-layout {
@@ -774,29 +1034,25 @@
   }
 }
 
-@media (max-width: 540px) {
-  .mp-inline {
-    flex-direction: column;
-  }
-
+@media (max-width: 767px) {
+  /* Game-page room bar: stack info + actions for the mobile flow. */
   .mp-room-bar {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
   .mp-room-bar-info {
     flex-wrap: wrap;
   }
 
-  /* Stack the room actions full-width so each button is easy to tap. */
-  .mp-actions .btn {
-    flex: 1 1 100%;
-    text-align: center;
+  .mp-room-bar .mp-actions {
+    margin-top: 0.2rem;
   }
+}
 
-  .mp-lobby-head .mp-code-box {
-    width: 100%;
-    min-width: 0;
+@media (max-width: 479px) {
+  .mp-inline {
+    flex-direction: column;
   }
 
   /* Game picker: give the Create Room confirmation room on small screens. */

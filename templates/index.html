@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title><%= platformName %> | Home</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/static/css/multiplayer.css" />
   <link rel="stylesheet" href="/static/css/room-chat.css" />
   <script defer src="/static/js/main.js"></script>
+  <script defer src="/static/js/sfx.js"></script>
   <script defer src="/socket.io/socket.io.js"></script>
   <script defer src="/static/js/room-chat.js"></script>
   <script defer src="/static/js/multiplayer.js"></script>
@@ -20,23 +21,35 @@
   <header class="site-header">
     <a class="brand-wrap" href="/" aria-label="<%= platformName %> home">
       <img class="brand-logo" src="/static/icons/logo.svg" alt="" width="36" height="36" />
-      <span class="brand-title"><%= platformName %></span>
+      <span class="brand-title brand-title-desktop"><%= platformName %></span>
+      <span class="brand-title brand-title-mobile"><%= platformShortName %></span>
     </a>
-    <nav class="top-nav">
+    <nav class="top-nav" aria-label="Site navigation">
       <a class="btn btn-ghost" href="/leaderboard">🏆 Leaderboard</a>
+      <button id="sfx-mute" class="sfx-mute-btn" type="button" data-sfx-toggle aria-pressed="false" aria-label="Toggle sound" title="Toggle sound">🔊</button>
     </nav>
+    <button id="nav-menu-btn" class="nav-menu-btn" type="button" aria-expanded="false" aria-controls="nav-drawer" aria-label="Open menu">
+      <span class="nav-menu-icon" aria-hidden="true"></span>
+    </button>
+    <div id="nav-drawer" class="nav-drawer" aria-label="Site menu">
+      <a class="nav-drawer-link" href="/">Home</a>
+      <a class="nav-drawer-link" href="/leaderboard">🏆 Leaderboard</a>
+      <button class="nav-drawer-link" type="button" data-sfx-toggle aria-pressed="false">
+        <span class="nav-sfx-icon" aria-hidden="true">🔊</span> Sound
+      </button>
+    </div>
   </header>
 
   <main class="home-layout">
     <section class="hero-panel hero-panel-sm">
       <div class="hero-copy">
         <p class="eyebrow">MULTI-GAME PLATFORM</p>
-        <h2>Pick a challenge and <span class="grad-text">jump in.</span></h2>
-        <p>Arcade, board, and casual games — play solo or battle friends in live multiplayer rooms.</p>
+        <h2>Pick a challenge. <span class="grad-text">Jump in.</span></h2>
+        <p>Arcade, board, strategy and card games — go solo or battle friends in live multiplayer rooms.</p>
         <div class="hero-stats">
-          <span class="stat-chip"><strong><%= gameCount %></strong> games</span>
-          <span class="stat-chip"><strong>5</strong> categories</span>
-          <span class="stat-chip"><strong>∞</strong> fun</span>
+          <span class="stat-chip"><strong><%= gameCount %></strong><span class="chip-label">Games</span></span>
+          <span class="stat-chip"><strong><%= categoryCount %></strong><span class="chip-label">Categories</span></span>
+          <span class="stat-chip"><strong>∞</strong><span class="chip-label">Fun</span></span>
         </div>
       </div>
       <div class="hero-orb" aria-hidden="true">
@@ -46,14 +59,14 @@
       </div>
     </section>
 
-    <section class="filter-strip" role="tablist" aria-label="Filter games by category">
-      <button class="filter-btn active" data-filter="all">ALL</button>
-      <button class="filter-btn" data-filter="arcade">ARCADE</button>
-      <button class="filter-btn" data-filter="board">BOARD</button>
-      <button class="filter-btn" data-filter="strategy">STRATEGY</button>
-      <button class="filter-btn" data-filter="cards">CARDS</button>
-      <button class="filter-btn" data-filter="casual">CASUAL</button>
-    </section>
+    <div class="filter-strip" role="group" aria-label="Filter games by category">
+      <button class="filter-btn active" type="button" data-filter="all" aria-pressed="true">All games</button>
+      <button class="filter-btn" type="button" data-filter="arcade" aria-pressed="false">Arcade</button>
+      <button class="filter-btn" type="button" data-filter="board" aria-pressed="false">Board</button>
+      <button class="filter-btn" type="button" data-filter="strategy" aria-pressed="false">Strategy</button>
+      <button class="filter-btn" type="button" data-filter="cards" aria-pressed="false">Cards</button>
+      <button class="filter-btn" type="button" data-filter="casual" aria-pressed="false">Casual</button>
+    </div>
 
     <section id="multiplayer-panel" class="multiplayer-panel card-surface" data-current-game="" data-mp-ready="true">
       <div class="multiplayer-head">
@@ -64,33 +77,54 @@
         <span id="mp-connection" class="mp-status">Connecting...</span>
       </div>
 
-      <div class="mp-grid">
-        <form id="mp-name-form" class="mp-card">
-          <label for="mp-player-name">Display name</label>
-          <div class="mp-inline">
-            <input id="mp-player-name" type="text" maxlength="20" autocomplete="nickname" placeholder="Pratik" />
-            <button class="btn btn-outline" type="submit">Save</button>
-          </div>
-          <p id="mp-name-error" class="mp-error" aria-live="polite"></p>
-        </form>
+      <button id="mp-play-online" class="btn btn-primary mp-play-online" type="button">▶ Play Online</button>
 
-        <form id="mp-create-form" class="mp-card">
-          <label>Create a multiplayer room</label>
-          <input id="mp-game-select" type="hidden" />
-          <button id="mp-open-picker" class="btn btn-outline" type="button">Choose Game</button>
-          <button id="mp-create-room-btn" class="btn btn-primary" type="submit">Create Room</button>
-          <p id="mp-create-note" class="mp-muted">Choose one of the <%= gameCount %> games to host a room. Any game can be played head-to-head.</p>
-          <p id="mp-create-error" class="mp-error" aria-live="polite"></p>
-        </form>
-
-        <form id="mp-join-form" class="mp-card">
-          <label for="mp-room-code">Join by room code</label>
-          <div class="mp-inline">
-            <input id="mp-room-code" type="text" maxlength="6" autocomplete="off" placeholder="A7BK92" />
-            <button class="btn btn-primary" type="submit">Join Room</button>
+      <div id="mp-mobile-sheet" class="mp-mobile-sheet" aria-hidden="true">
+        <div class="mp-sheet-backdrop" data-mp-sheet-close></div>
+        <div class="mp-sheet-panel">
+          <div class="mp-sheet-head">
+            <div>
+              <p class="eyebrow">MULTIPLAYER</p>
+              <h3>Play online</h3>
+            </div>
+            <button id="mp-sheet-close" class="btn btn-outline mp-sheet-close" type="button" aria-label="Close sheet">×</button>
           </div>
-          <p id="mp-action-error" class="mp-error" aria-live="polite"></p>
-        </form>
+          <div class="mp-sheet-tabs" role="tablist" aria-label="Multiplayer options">
+            <button id="mp-tab-create" class="mp-sheet-tab active" type="button" role="tab" aria-selected="true" data-mp-sheet-tab="create">Create Room</button>
+            <button id="mp-tab-join" class="mp-sheet-tab" type="button" role="tab" aria-selected="false" data-mp-sheet-tab="join">Join Room</button>
+          </div>
+          <div class="mp-grid">
+            <form id="mp-name-form" class="mp-card">
+              <label for="mp-player-name">Display name</label>
+              <div class="mp-inline">
+                <input id="mp-player-name" type="text" maxlength="20" autocomplete="nickname" placeholder="Pratik" />
+                <button class="btn btn-outline" type="submit">Save</button>
+              </div>
+              <p id="mp-name-error" class="mp-error" aria-live="polite"></p>
+            </form>
+
+            <form id="mp-create-form" class="mp-card">
+              <label>Create a multiplayer room</label>
+              <input id="mp-game-select" type="hidden" />
+              <p id="mp-create-selected" class="mp-create-selected hidden" aria-live="polite"></p>
+              <div class="mp-card-actions">
+                <button id="mp-open-picker" class="btn btn-outline" type="button">Choose Game</button>
+                <button id="mp-create-room-btn" class="btn btn-primary" type="submit">Create Room</button>
+              </div>
+              <p id="mp-create-note" class="mp-muted">Choose one of the <%= gameCount %> games to host a room. Any game can be played head-to-head.</p>
+              <p id="mp-create-error" class="mp-error" aria-live="polite"></p>
+            </form>
+
+            <form id="mp-join-form" class="mp-card">
+              <label for="mp-room-code">Join by room code</label>
+              <div class="mp-inline">
+                <input id="mp-room-code" type="text" maxlength="6" autocomplete="off" placeholder="A7BK92" />
+                <button class="btn btn-primary" type="submit">Join Room</button>
+              </div>
+              <p id="mp-action-error" class="mp-error" aria-live="polite"></p>
+            </form>
+          </div>
+        </div>
       </div>
 
       <div id="mp-lobby" class="mp-lobby hidden" aria-live="polite">

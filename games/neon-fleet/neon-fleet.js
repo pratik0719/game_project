@@ -47,6 +47,8 @@
   // Local game state.
   let phase = "placement"; // placement | battle | finished
   let myShips = []; // { name, size, label, row, col, horizontal, cells }
+  let boardTab = "mine"; // which board is visible on touch screens
+  let prevPhase = null;
   let myHits = {}; // "r,c" -> "hit" | "miss" (received)
   let enemyShots = {}; // "r,c" -> "hit" | "miss" (made by me)
   let sunkShips = []; // enemy ship labels sunk
@@ -111,11 +113,24 @@
     enemyShots = state.enemyBoard?.shots || {};
     sunkShips = Array.isArray(state.enemyBoard?.sunk) ? state.enemyBoard.sunk : [];
     opponentReady = Boolean(state.enemyBoard?.ready);
-    myTurn = state.phase === "battle" && payload.currentTurn === (mpSupport ? mpSupport.getSocketId() : null);
+    const meSocket = mpSupport ? (mpSupport.me() || {}).socketId || null : null;
+    myTurn = state.phase === "battle" && payload.currentTurn === meSocket;
     if (phase === "finished") {
       myShips = Array.isArray(state.myBoard?.ships) ? state.myBoard.ships : [];
     }
+    // Once the server confirms a placement, advance the ship selection so
+    // players can keep tapping cells without reaching for the ship chips.
+    if (myShips.some((placed) => placed.name === selectedShip)) {
+      selectNextShip();
+    }
     render();
+    // Keep the page banner in step with the battle (placement keeps the
+    // "Place all five ships..." line set by enterMpMatch).
+    if (phase === "battle" && mpPlaying) {
+      statusEl.textContent = myTurn
+        ? `Your turn - fire at ${escapeHtml(mpOpponentName())}.`
+        : `${escapeHtml(mpOpponentName())} is firing...`;
+    }
   }
 
   function mpOpponentName() {
@@ -147,6 +162,8 @@
   // ---- Single-player mode ----
   function startSolo() {
     phase = "placement";
+    boardTab = "mine";
+    prevPhase = null;
     myShips = [];
     myHits = {};
     enemyShots = {};
@@ -369,6 +386,9 @@
     mpPlaying = true;
     mpResult = null;
     phase = "placement";
+    boardTab = "mine";
+    prevPhase = null;
+    selectedShip = SHIPS[0].name;
     statusEl.textContent = "Place all five ships, then press Ready.";
     render();
     renderControls();
@@ -398,9 +418,10 @@
     }
     sendAction({ type: "attack_cell", row, col });
   }
-  function sendSurrender() {
+  async function sendSurrender() {
     if (!mpPlaying || mpResult) return;
-    if (!window.confirm("Surrender the match?")) return;
+    const ok = window.ArcadeUI ? await window.ArcadeUI.confirm("Surrender the match?", { okText: "Surrender", danger: true }) : true;
+    if (!ok) return;
     sendAction({ type: "surrender" });
   }
 
@@ -466,6 +487,13 @@
   }
 
   function render() {
+    // When the battle starts, flip to the enemy board so the active tab
+    // matches where the player has to act (they can switch back freely).
+    if (prevPhase !== null && prevPhase === "placement" && phase !== "placement") {
+      boardTab = "enemy";
+    }
+    prevPhase = phase;
+
     root.innerHTML = "";
     const wrap = document.createElement("div");
     wrap.className = "fleet-wrap";
@@ -477,21 +505,55 @@
       .join("");
     wrap.appendChild(phaseBar);
 
+    // Touch-screen tabs: only one board is shown at a time on phones;
+    // on desktop both boards stay side by side and the tabs are hidden.
+    const tabs = document.createElement("div");
+    tabs.className = "fleet-tabs";
+    [["mine", "My Fleet"], ["enemy", "Enemy Waters"]].forEach(([id, label]) => {
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = `fleet-tab${boardTab === id ? " active" : ""}`;
+      tab.textContent = label;
+      tab.addEventListener("click", () => {
+        if (boardTab === id) return;
+        boardTab = id;
+        render();
+      });
+      tabs.appendChild(tab);
+    });
+    wrap.appendChild(tabs);
+
     const boards = document.createElement("div");
     boards.className = "fleet-boards";
 
     // My board.
     const myPanel = document.createElement("div");
     myPanel.className = "fleet-panel";
+    myPanel.dataset.board = "mine";
+    if (boardTab === "mine") myPanel.classList.add("active");
     const myHead = document.createElement("div");
     myHead.className = "fleet-panel-head";
     myHead.innerHTML = `<h4>My Fleet</h4><span class="fleet-count">${myShips.length}/${SHIPS.length}</span>`;
     myPanel.appendChild(myHead);
 
+    // During placement the my-board is the placement grid: tap an empty
+    // cell to drop the selected ship, tap a placed ship to remove it
+    // (touch has no right-click, so the board itself is the eraser).
+    const placing = phase === "placement" && !myReady && !mpResult;
     const myBoard = buildBoard("fleet-mine", {
-      interactive: false,
-      preview: true,
-      onCellClick: () => {},
+      interactive: placing,
+      preview: placing,
+      onCellClick: (row, col) => {
+        if (phase !== "placement" || myReady) return;
+        const ship = myShips.find((entry) => entry.cells.some((c) => c.row === row && c.col === col));
+        if (ship) {
+          if (mpPlaying) sendRemove(ship.name);
+          else soloRemoveShip(ship.name);
+          return;
+        }
+        if (mpPlaying) sendPlace(row, col);
+        else soloPlace(row, col);
+      },
     });
     // Paint ships + received hits.
     myBoard.querySelectorAll(".fleet-cell").forEach((cell) => {
@@ -518,6 +580,8 @@
     // Enemy board.
     const enemyPanel = document.createElement("div");
     enemyPanel.className = "fleet-panel";
+    enemyPanel.dataset.board = "enemy";
+    if (boardTab === "enemy") enemyPanel.classList.add("active");
     const enemyHead = document.createElement("div");
     enemyHead.className = "fleet-panel-head";
     const enemyName = mpPlaying ? escapeHtml(mpOpponentName()) : "Enemy Waters";
@@ -684,8 +748,8 @@
     const hint = document.createElement("p");
     hint.className = "mp-muted fleet-hint";
     hint.textContent = isMp
-      ? "Click a cell to place the selected ship. Right-click a placed ship to remove it."
-      : "Click a cell to place the selected ship. Right-click a placed ship to remove it. Press R to rotate.";
+      ? "Tap a cell to place the selected ship. Tap a placed ship to remove it."
+      : "Tap a cell to place the selected ship. Tap a placed ship to remove it. Use Rotate to switch orientation.";
     controls.appendChild(hint);
   }
 

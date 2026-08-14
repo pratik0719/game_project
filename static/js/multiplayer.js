@@ -35,6 +35,7 @@
     createRoomBtn: document.getElementById("mp-create-room-btn"),
     createNote: document.getElementById("mp-create-note"),
     createError: document.getElementById("mp-create-error"),
+    createGame: document.getElementById("mp-create-selected"),
     gameSelect: document.getElementById("mp-game-select"),
     joinForm: document.getElementById("mp-join-form"),
     roomCodeInput: document.getElementById("mp-room-code"),
@@ -60,6 +61,11 @@
     leaveRoom: document.getElementById("mp-leave-room"),
     playerList: document.getElementById("mp-player-list"),
     chatMount: document.getElementById("mp-chat-mount"),
+    // Mobile bottom sheet (replaces the stacked forms on phones).
+    playOnline: document.getElementById("mp-play-online"),
+    sheet: document.getElementById("mp-mobile-sheet"),
+    sheetClose: document.getElementById("mp-sheet-close"),
+    sheetTabs: Array.from(document.querySelectorAll(".mp-sheet-tab")),
   };
 
   let chatInstance = null;
@@ -159,12 +165,87 @@
       buildGamePicker();
       bindPicker();
       bindGameCardButtons();
+      refreshCreateGameLabel();
     });
 
     state.socket = io({ transports: ["websocket", "polling"] });
     bindSocket();
     bindForms();
+    bindMobileSheet();
     hydrateInviteCode();
+  }
+
+  // ------------------------------------------------------------------
+  // Mobile bottom sheet: one Play Online button, Create/Join tabs, the
+  // player name asked once (the existing name card lives in the sheet).
+  // ------------------------------------------------------------------
+
+  function openMobileSheet() {
+    if (!els.sheet || !els.playOnline) return;
+    els.sheet.classList.add("open");
+    els.sheet.setAttribute("aria-hidden", "false");
+    document.body.classList.add("sheet-open");
+    refreshCreateGameLabel();
+    if (els.nameInput) els.nameInput.focus();
+  }
+
+  function closeMobileSheet() {
+    if (!els.sheet) return;
+    els.sheet.classList.remove("open");
+    els.sheet.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("sheet-open");
+  }
+
+  function bindMobileSheet() {
+    if (!els.sheet || !els.playOnline) return;
+
+    els.playOnline.addEventListener("click", openMobileSheet);
+    els.sheetClose?.addEventListener("click", closeMobileSheet);
+
+    // Backdrop tap closes the sheet.
+    els.sheet.addEventListener("click", (event) => {
+      if (event.target.closest("[data-mp-sheet-close]")) closeMobileSheet();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && els.sheet.classList.contains("open")) closeMobileSheet();
+    });
+
+    // Tabs: show only the active form.
+    els.sheetTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const mode = String(tab.dataset.mpSheetTab || "create");
+        els.sheet.classList.toggle("sheet-mode-join", mode === "join");
+        els.sheetTabs.forEach((other) => {
+          const active = other === tab;
+          other.classList.toggle("active", active);
+          other.setAttribute("aria-selected", active ? "true" : "false");
+        });
+      });
+    });
+
+    // Leaving the phone width resets the sheet.
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 767 && els.sheet.classList.contains("open")) closeMobileSheet();
+    });
+
+    // Keep the sheet's inputs (name, room code) above the software keyboard
+    // on Android - iOS resizes the layout viewport itself. The sheet is
+    // lifted by the keyboard inset and capped to the visible viewport.
+    function syncSheetViewport() {
+      const vv = window.visualViewport;
+      if (!vv || !els.sheet) return;
+      const inset = Math.max(0, Math.round((window.innerHeight || 0) - vv.height - vv.offsetTop));
+      const visible = Math.max(220, Math.round(vv.height - vv.offsetTop - 8));
+      els.sheet.style.setProperty("--sheet-keyboard-inset", `${inset}px`);
+      els.sheet.style.setProperty("--sheet-vv-height", `${visible}px`);
+    }
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", syncSheetViewport);
+      window.visualViewport.addEventListener("scroll", syncSheetViewport);
+    }
+    window.addEventListener("resize", syncSheetViewport);
+    syncSheetViewport();
   }
 
   async function loadRegistry() {
@@ -282,6 +363,7 @@
       state.selectedGameId = "";
       clearNode(picker.grid.querySelectorAll(".selected"));
       picker.error.textContent = "";
+      refreshCreateGameLabel();
     });
     picker.createBtn.addEventListener("click", () => {
       const name = pickerName();
@@ -349,6 +431,7 @@
     picker.step2.classList.add("hidden");
     clearNode(picker.grid.querySelectorAll(".selected"));
     picker.nameInput.value = state.playerName;
+    refreshCreateGameLabel();
 
     const canonical = String(preferredGameId || "").trim().toLowerCase();
     if (canonical && state.registry[canonical]) {
@@ -368,6 +451,7 @@
     clearNode(picker.grid.querySelectorAll(".selected"));
     const card = picker.grid.querySelector(`[data-game="${CSS.escape(gameId)}"]`);
     if (card) card.classList.add("selected");
+    refreshCreateGameLabel();
 
     const game = state.registry[gameId];
     picker.selected.innerHTML = `Create a room for <strong>${gameIconHtmlInline(game)} ${escapeHtml(game.name)}</strong> (${playersLabel(game)}, ${game.mode === "turn-based" ? "turn-based" : "simultaneous"}).`;
@@ -418,6 +502,24 @@
     const max = game.maxPlayers;
     if (min === max) return `${min} Player${min > 1 ? "s" : ""}`;
     return `${min}-${max} Players`;
+  }
+
+  /**
+   * Keep the Create Room card honest about which game a room will be for.
+   * Shows the page's own game on game pages, the picked game on the home
+   * page, and hides entirely when nothing is selected yet.
+   */
+  function refreshCreateGameLabel() {
+    const label = els.createGame;
+    if (!label) return;
+    const game = (state.currentGame && state.registry?.[state.currentGame]) || state.registry?.[state.selectedGameId] || null;
+    if (!game) {
+      label.classList.add("hidden");
+      label.innerHTML = "";
+      return;
+    }
+    label.innerHTML = `${game.logo ? `<img src="${escapeAttr(game.logo)}" alt="" />` : `<span class="mp-create-selected-icon">${escapeHtml(game.icon)}</span>`}<span>${escapeHtml(game.name)}</span>`;
+    label.classList.remove("hidden");
   }
 
   /** Large image slot (picker card): rich banner art, icon as fallback. */
@@ -860,6 +962,8 @@
     }
 
     document.body.classList.add("in-room");
+    // A room taking over replaces the create/join sheet with the lobby.
+    closeMobileSheet();
     els.lobby?.classList.remove("hidden");
     els.rvRoot?.classList.remove("hidden");
 

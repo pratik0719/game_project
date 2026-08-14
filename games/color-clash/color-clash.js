@@ -558,9 +558,10 @@
   function sendChallenge() {
     if (mpPlaying && mpSupport) mpSupport.sendAction({ type: "challenge_last_card" });
   }
-  function sendSurrender() {
+  async function sendSurrender() {
     if (!mpPlaying || mpResult) return;
-    if (!window.confirm("Surrender the match?")) return;
+    const ok = window.ArcadeUI ? await window.ArcadeUI.confirm("Surrender the match?", { okText: "Surrender", danger: true }) : true;
+    if (!ok) return;
     if (mpSupport) mpSupport.sendAction({ type: "surrender" });
   }
 

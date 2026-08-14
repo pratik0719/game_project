@@ -78,6 +78,21 @@
 
   const canvas = root.querySelector("canvas");
   const ctx = canvas.getContext("2d");
+
+  // Logical wheel space stays fixed (physics untouched); only the backing
+  // bitmap is re-backed at devicePixelRatio for crisp mobile rendering.
+  const LOGICAL_W = canvas.width;
+  const LOGICAL_H = canvas.height;
+  let canvasDpr = 1;
+  function applyCanvasDpr() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (dpr === canvasDpr) return;
+    canvasDpr = dpr;
+    canvas.width = Math.round(LOGICAL_W * dpr);
+    canvas.height = Math.round(LOGICAL_H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  applyCanvasDpr();
   const resultEl = document.getElementById("spinwheel-result");
   const winsEl = document.getElementById("spinwheel-wins");
   const totalEl = document.getElementById("spinwheel-total");
@@ -282,12 +297,12 @@
   if (!mpWaiting && !mpPlaying) statusEl.textContent = "Spin for random prizes.";
 
   function drawWheel(angle) {
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
+    const cx = LOGICAL_W / 2;
+    const cy = LOGICAL_H / 2;
     const radius = 182;
     const segAngle = (Math.PI * 2) / segments.length;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(angle);

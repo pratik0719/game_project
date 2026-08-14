@@ -36,6 +36,21 @@
 
   const canvas = document.getElementById("breakout-canvas");
   const ctx = canvas.getContext("2d");
+
+  // Logical game space stays fixed (physics untouched); only the backing
+  // bitmap is re-backed at devicePixelRatio for crisp mobile rendering.
+  const LOGICAL_W = canvas.width;
+  const LOGICAL_H = canvas.height;
+  let canvasDpr = 1;
+  function applyCanvasDpr() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (dpr === canvasDpr) return;
+    canvasDpr = dpr;
+    canvas.width = Math.round(LOGICAL_W * dpr);
+    canvas.height = Math.round(LOGICAL_H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  applyCanvasDpr();
   const scoreEl = document.getElementById("breakout-score");
   const livesEl = document.getElementById("breakout-lives");
   const levelEl = document.getElementById("breakout-level");
@@ -75,7 +90,7 @@
   let mpWaiting = false;
   let mpPlaying = false;
   let mpResult = null;
-  let mpTargetX = canvas.width / 2;
+  let mpTargetX = LOGICAL_W / 2;
   let mpLastPaddleSend = 0;
   const OPPONENT_PALETTE = { paddle: "#f472b6", ball: "#fb7185" };
 
@@ -131,14 +146,16 @@
     } else if (initialRoom && initialRoom.gameId === MP_GAME) {
       if (initialRoom.status === "playing" && initialRoom.gameState) enterMpMatch();
       else enterMpWaiting();
-    } else {
-      startState();
-      draw();
-    }
   } else {
     startState();
     draw();
+    statusEl.textContent = "Press Start to begin.";
   }
+} else {
+  startState();
+  draw();
+  statusEl.textContent = "Press Start to begin.";
+}
 
 
   startBtn.addEventListener("click", () => {
@@ -159,7 +176,7 @@
   window.addEventListener("keydown", (event) => {
     if (mpPlaying) {
       if (event.key === "ArrowRight") {
-        mpTargetX = Math.min(canvas.width, mpTargetX + 24);
+        mpTargetX = Math.min(LOGICAL_W, mpTargetX + 24);
         sendMpPaddle();
       }
       if (event.key === "ArrowLeft") {
@@ -185,29 +202,88 @@
     }
   });
 
-  canvas.addEventListener("mousemove", (event) => {
+  // Drag (or hover with a mouse) to move the paddle. Pointer events cover
+  // touch drags; the game area is touch-action:none so the gesture never
+  // scrolls the page.
+  function paddleFromPointer(event) {
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     if (mpPlaying) {
-      mpTargetX = Math.max(0, Math.min(canvas.width, x));
+      mpTargetX = Math.max(0, Math.min(LOGICAL_W, x));
       sendMpPaddle();
       return;
     }
-    paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, x - paddle.width / 2));
+    paddle.x = Math.max(0, Math.min(LOGICAL_W - paddle.width, x - paddle.width / 2));
+  }
+  canvas.addEventListener("pointerdown", (event) => {
+    canvas.setPointerCapture?.(event.pointerId);
+    paddleFromPointer(event);
   });
+  canvas.addEventListener("pointermove", paddleFromPointer);
+
+  // Optional hold-to-move paddle buttons (touch-friendly, also work in MP).
+  let holdTimers = {};
+  function startHold(dir) {
+    if (mpPlaying) {
+      holdTimers[dir] = window.setInterval(() => {
+        mpTargetX = Math.max(0, Math.min(LOGICAL_W, mpTargetX + (dir === "right" ? 24 : -24)));
+        sendMpPaddle();
+      }, 60);
+      return;
+    }
+    if (dir === "right") rightPressed = true;
+    else leftPressed = true;
+  }
+  function stopHold(dir) {
+    if (holdTimers[dir]) {
+      window.clearInterval(holdTimers[dir]);
+      delete holdTimers[dir];
+    }
+    if (dir === "right") rightPressed = false;
+    else leftPressed = false;
+  }
+  function buildDirButtons() {
+    const row = document.createElement("div");
+    row.className = "arcade-dir-row";
+    [
+      ["left", "◀", "Move paddle left"],
+      ["right", "▶", "Move paddle right"],
+    ].forEach(([dir, glyph, label]) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "arcade-dir-btn";
+      btn.dataset.dir = dir;
+      btn.setAttribute("aria-label", label);
+      btn.textContent = glyph;
+      btn.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        startHold(dir);
+      });
+      ["pointerup", "pointercancel", "pointerleave"].forEach((evt) => {
+        btn.addEventListener(evt, () => stopHold(dir));
+      });
+      row.appendChild(btn);
+    });
+    return row;
+  }
+  function mountDirButtons() {
+    if (controls.querySelector(".arcade-dir-row")) return;
+    controls.appendChild(buildDirButtons());
+  }
+  mountDirButtons();
 
   function startState() {
     paddle = {
       width: paddleWidthDefault,
       height: 12,
-      x: (canvas.width - paddleWidthDefault) / 2,
-      y: canvas.height - 24,
+      x: (LOGICAL_W - paddleWidthDefault) / 2,
+      y: LOGICAL_H - 24,
       speed: 6,
     };
 
     ball = {
-      x: canvas.width / 2,
-      y: canvas.height - 40,
+      x: LOGICAL_W / 2,
+      y: LOGICAL_H - 40,
       r: 8,
       vx: baseSpeed,
       vy: -baseSpeed,
@@ -240,7 +316,7 @@
 
   function update() {
     if (rightPressed) {
-      paddle.x = Math.min(canvas.width - paddle.width, paddle.x + paddle.speed);
+      paddle.x = Math.min(LOGICAL_W - paddle.width, paddle.x + paddle.speed);
     }
     if (leftPressed) {
       paddle.x = Math.max(0, paddle.x - paddle.speed);
@@ -249,7 +325,7 @@
     ball.x += ball.vx;
     ball.y += ball.vy;
 
-    if (ball.x - ball.r < 0 || ball.x + ball.r > canvas.width) {
+    if (ball.x - ball.r < 0 || ball.x + ball.r > LOGICAL_W) {
       ball.vx *= -1;
     }
     if (ball.y - ball.r < 0) {
@@ -267,7 +343,7 @@
       ball.vy = -Math.abs(ball.vy);
     }
 
-    if (ball.y - ball.r > canvas.height) {
+    if (ball.y - ball.r > LOGICAL_H) {
       lives -= 1;
       updateHud();
       if (lives <= 0) {
@@ -312,8 +388,8 @@
   }
 
   function resetBall() {
-    ball.x = canvas.width / 2;
-    ball.y = canvas.height - 40;
+    ball.x = LOGICAL_W / 2;
+    ball.y = LOGICAL_H - 40;
     ball.vx = baseSpeed * (Math.random() < 0.5 ? -1 : 1);
     ball.vy = -Math.abs(baseSpeed + level * 0.15);
   }
@@ -337,13 +413,13 @@
   }
 
   function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
 
-    const background = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    const background = ctx.createLinearGradient(0, 0, 0, LOGICAL_H);
     background.addColorStop(0, "#160824");
     background.addColorStop(1, "#090f1f");
     ctx.fillStyle = background;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
 
     drawBricks();
 
@@ -409,13 +485,13 @@
   }
 
   function drawMpWaiting() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
     ctx.fillStyle = "#0a0f1f";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
     ctx.fillStyle = "rgba(144, 166, 195, 0.6)";
     ctx.font = "16px Orbitron";
     ctx.textAlign = "center";
-    ctx.fillText("Waiting for the host...", canvas.width / 2, canvas.height / 2);
+    ctx.fillText("Waiting for the host...", LOGICAL_W / 2, LOGICAL_H / 2);
     ctx.textAlign = "start";
   }
 
@@ -425,10 +501,10 @@
 
     const myNumber = mpSupport ? mpSupport.myPlayerNumber() : null;
     const players = mpSupport ? mpSupport.getPlayers() : [];
-    const halfWidth = canvas.width / 2;
-    const scale = halfWidth / canvas.width;
+    const halfWidth = LOGICAL_W / 2;
+    const scale = halfWidth / LOGICAL_W;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
 
     let index = 0;
     Object.keys(state.playerStates).forEach((number) => {
@@ -457,11 +533,11 @@
   function drawMpField(field, offsetX, width, scale, label, paddleColor, ballColor) {
     ctx.save();
     ctx.beginPath();
-    ctx.rect(offsetX, 0, width, canvas.height);
+    ctx.rect(offsetX, 0, width, LOGICAL_H);
     ctx.clip();
 
     ctx.fillStyle = "#160824";
-    ctx.fillRect(offsetX, 0, width, canvas.height);
+    ctx.fillRect(offsetX, 0, width, LOGICAL_H);
 
     (field.bricks || []).forEach((brick) => {
       if (brick.destroyed) return;
@@ -497,6 +573,7 @@
     controls.appendChild(bar);
     if (mpSupport) mpSupport.renderMatchBar(bar);
     if (mpSupport) mpSupport.renderPlayAgainButton(controls, mpPlaying && Boolean(mpResult));
+    mountDirButtons();
   }
 
   function exitMultiplayer() {
@@ -512,11 +589,12 @@
     if (again) again.remove();
     startState();
     draw();
+    statusEl.textContent = "Press Start to begin.";
   }
 
   function createBricks(rCount, cCount) {
     const result = [];
-    const brickWidth = (canvas.width - (cCount + 1) * brickPadding) / cCount;
+    const brickWidth = (LOGICAL_W - (cCount + 1) * brickPadding) / cCount;
 
     for (let r = 0; r < rCount; r += 1) {
       for (let c = 0; c < cCount; c += 1) {

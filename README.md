@@ -47,8 +47,6 @@ http://127.0.0.1:3000
 | `games/flappy/flappy.js` | File | JavaScript gameplay or shared frontend logic |
 | `games/flappy/flappy.xml` | File | XML configuration or persisted data |
 | `games/flappy/README.md` | File | Documentation file |
-| `games/game2048` | Folder | folder |
-| `games/game2048/README.md` | File | Documentation file |
 | `games/ludo` | Folder | folder |
 | `games/ludo/ludo.js` | File | JavaScript gameplay or shared frontend logic |
 | `games/ludo/ludo.xml` | File | XML configuration or persisted data |

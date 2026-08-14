@@ -89,25 +89,46 @@
     return muted;
   }
 
-  let button = null;
+  let buttons = [];
 
-  function updateButton() {
-    if (!button) return;
-    button.textContent = muted ? "🔇" : "🔊";
-    button.classList.toggle("muted", muted);
-    button.setAttribute("aria-pressed", muted ? "true" : "false");
-    button.setAttribute("aria-label", muted ? "Unmute sounds" : "Mute sounds");
+  function setButtonState(el) {
+    const glyph = muted ? "🔇" : "🔊";
+    // Drawer buttons keep a separate label span (e.g. "Sound"); compact
+    // header buttons are icon-only.
+    const icon = el.querySelector(".nav-sfx-icon");
+    if (icon) icon.textContent = glyph;
+    else el.textContent = glyph;
+    el.classList.toggle("muted", muted);
+    el.setAttribute("aria-pressed", muted ? "true" : "false");
+    el.setAttribute("aria-label", muted ? "Unmute sounds" : "Mute sounds");
   }
 
-  function injectMuteButton() {
-    if (button || document.getElementById("sfx-mute")) return;
-    button = document.createElement("button");
-    button.id = "sfx-mute";
-    button.type = "button";
-    button.className = "sfx-mute-btn";
-    button.title = "Toggle sound";
-    button.addEventListener("click", toggleMute);
-    document.body.appendChild(button);
+  function updateButton() {
+    buttons.forEach(setButtonState);
+  }
+
+  // Wire every sound toggle on the page (header button + mobile drawer
+  // button) so they all share one mute state.
+  function wireMuteButton() {
+    if (buttons.length) return;
+    buttons = Array.from(document.querySelectorAll("[data-sfx-toggle]"));
+    if (buttons.length === 0) {
+      // Defensive fallback: drop one into the header nav if the markup
+      // is missing on some future page.
+      const fallback = document.createElement("button");
+      fallback.id = "sfx-mute";
+      fallback.type = "button";
+      fallback.className = "sfx-mute-btn";
+      fallback.dataset.sfxToggle = "";
+      const nav = document.querySelector(".site-header .top-nav");
+      if (nav) nav.appendChild(fallback);
+      else document.body.appendChild(fallback);
+      buttons.push(fallback);
+    }
+    buttons.forEach((el) => {
+      el.title = "Toggle sound";
+      el.addEventListener("click", toggleMute);
+    });
     updateButton();
   }
 
@@ -119,7 +140,8 @@
   document.addEventListener("keydown", prime, { once: true });
 
   document.addEventListener("DOMContentLoaded", () => {
-    if (document.body.dataset.page === "game") injectMuteButton();
+    const page = document.body.dataset.page;
+    if (page === "home" || page === "game" || page === "leaderboard") wireMuteButton();
   });
 
   window.ArcadeSFX = {

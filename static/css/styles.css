@@ -10,6 +10,17 @@
   --danger: #f87171;
   --radius-lg: 16px;
   --card-glass: rgba(18, 24, 42, 0.8);
+
+  /* ------------------------------------------------------------------
+   * Desktop layout tokens (1024px - 1920px). Single source of truth for
+   * the page shell so header, layouts, grids and the chat sidebar stay
+   * aligned instead of each hardcoding its own width/padding/gap.
+   * ------------------------------------------------------------------ */
+  --page-max-width: 1400px;
+  --page-pad: 1.25rem;
+  --card-gap: 1.5rem;
+  --chat-width: 360px;
+  --chat-width-narrow: 320px;
 }
 
 * {
@@ -21,6 +32,8 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  /* Never let stray game content push a horizontal scrollbar on desktop. */
+  overflow-x: clip;
 }
 
 body {
@@ -72,7 +85,9 @@ img {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 0.55rem max(1.25rem, calc((100% - 1400px) / 2));
+  padding: 0.55rem max(var(--page-pad), calc((100% - var(--page-max-width)) / 2));
+  /* Clear the phone notch: the header is the topmost fixed element. */
+  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
   border-bottom: 1px solid var(--line);
   background: rgba(12, 17, 32, 0.82);
   backdrop-filter: blur(14px);
@@ -111,6 +126,152 @@ img {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+}
+
+/* Short brand name - only shown on phones (full name is hidden there). */
+.brand-title-mobile {
+  display: none;
+}
+
+/* ------------------------------------------------------------------
+ * Mobile menu button + drawer (hidden on desktop, phones only).
+ * ------------------------------------------------------------------ */
+
+.nav-menu-btn {
+  display: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(30, 41, 66, 0.5);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.nav-menu-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line) 45%);
+}
+
+.nav-menu-icon {
+  position: relative;
+  display: block;
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: background 0.2s ease;
+}
+
+.nav-menu-icon::before,
+.nav-menu-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: top 0.2s ease, transform 0.2s ease;
+}
+
+.nav-menu-icon::before {
+  top: -6px;
+}
+
+.nav-menu-icon::after {
+  top: 6px;
+}
+
+.nav-menu-btn[aria-expanded="true"] .nav-menu-icon {
+  background: transparent;
+}
+
+.nav-menu-btn[aria-expanded="true"] .nav-menu-icon::before {
+  top: 0;
+  transform: rotate(45deg);
+}
+
+.nav-menu-btn[aria-expanded="true"] .nav-menu-icon::after {
+  top: 0;
+  transform: rotate(-45deg);
+}
+
+.nav-drawer {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 25;
+  flex-direction: column;
+  border-bottom: 1px solid var(--line);
+  background: rgba(12, 17, 32, 0.98);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.45);
+}
+
+.nav-drawer.open {
+  display: flex;
+  animation: nav-drawer-in 0.16s ease;
+}
+
+.nav-drawer-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.7rem 1.15rem;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--text-main);
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nav-drawer-link:first-child {
+  border-top: none;
+}
+
+.nav-drawer-link:hover {
+  color: var(--accent-glow);
+  background: rgba(148, 163, 184, 0.08);
+}
+
+/* Sound toggle - compact icon button in the header nav. */
+.sfx-mute-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(30, 41, 66, 0.5);
+  color: var(--text-main);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.18s ease;
+}
+
+.sfx-mute-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line) 45%);
+  transform: translateY(-1px);
+}
+
+.sfx-mute-btn.muted {
+  color: var(--text-dim);
+  opacity: 0.75;
 }
 
 /* ------------------------------------------------------------------
@@ -156,6 +317,17 @@ img {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--line) 45%);
 }
 
+.btn-danger {
+  background: color-mix(in srgb, var(--danger) 88%, #0d1222 12%);
+  color: #fff;
+  font-weight: 700;
+  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+}
+
+.btn-danger:hover {
+  filter: brightness(1.1);
+}
+
 .btn-ghost {
   background: transparent;
   border-color: transparent;
@@ -173,6 +345,15 @@ img {
   transform: none;
 }
 
+/* Visible keyboard focus everywhere (shared across all pages). */
+.btn:focus-visible,
+.filter-btn:focus-visible,
+.sfx-mute-btn:focus-visible,
+.brand-wrap:focus-visible {
+  outline: 2px solid var(--accent-glow);
+  outline-offset: 2px;
+}
+
 /* ------------------------------------------------------------------
  * Surfaces & layout shells
  * ------------------------------------------------------------------ */
@@ -187,7 +368,7 @@ img {
 .home-layout,
 .game-layout,
 .leaderboard-layout {
-  width: min(1400px, calc(100% - 2rem));
+  width: min(var(--page-max-width), calc(100% - 2 * var(--page-pad)));
   margin: 1.4rem auto 2rem;
 }
 
@@ -232,11 +413,11 @@ img {
 }
 
 .grad-text {
-  background: none;
-  -webkit-background-clip: initial;
-  background-clip: initial;
-  -webkit-text-fill-color: currentColor;
   color: var(--accent-glow);
+  background: linear-gradient(92deg, var(--accent-glow) 0%, #7ff0ff 48%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .hero-panel p {
@@ -255,19 +436,27 @@ img {
 .stat-chip {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.35rem;
-  padding: 0.4rem 0.85rem;
+  gap: 0.45rem;
+  padding: 0.42rem 0.95rem;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(18, 24, 42, 0.6);
   color: var(--text-dim);
   font-size: 0.86rem;
+  transition: border-color 0.2s ease;
 }
 
 .stat-chip strong {
   font-family: "Orbitron", sans-serif;
-  font-size: 1rem;
+  font-size: 1.05rem;
   color: var(--text-main);
+}
+
+.chip-label {
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .hero-orb {
@@ -366,27 +555,34 @@ img {
 }
 
 .filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.3rem;
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
   color: var(--text-dim);
-  padding: 0.48rem 1rem;
+  padding: 0.45rem 1rem;
   font-family: "Orbitron", sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .filter-btn:hover {
   color: var(--text-main);
+  background: rgba(148, 163, 184, 0.08);
 }
 
 .filter-btn.active {
   background: var(--accent);
   color: #0d1222;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 /* ------------------------------------------------------------------
@@ -427,8 +623,24 @@ img {
 
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
+  /* Four flexible columns on large screens (1fr tracks, never fixed widths). */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--card-gap);
+}
+
+/* Smaller laptops: drop to three flexible columns. */
+@media (max-width: 1279px) {
+  .games-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Tablets and below keep the previous auto-fill behaviour. */
+@media (max-width: 1023px) {
+  .games-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+  }
 }
 
 .game-card {
@@ -538,15 +750,29 @@ img {
 .badge-row h3 {
   margin: 0;
   font-size: 1.02rem;
+  line-height: 1.3;
   color: var(--text-main);
   overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.game-card .mp-badge {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .game-card p {
   margin: 0;
   color: var(--text-dim);
-  min-height: 2.7rem;
   font-size: 1rem;
+  line-height: 1.4;
+  /* Every description occupies exactly two lines (clamped), so the
+   * action row lines up across cards of equal height. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(2 * 1.4em);
 }
 
 .game-card-actions {
@@ -558,7 +784,10 @@ img {
 
 .game-card-actions .btn {
   flex: 1 1 auto;
-  text-align: center;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .game-card-actions .btn-primary {
@@ -573,10 +802,6 @@ img {
   color: var(--text-dim);
   font-size: 0.7rem;
   letter-spacing: 0.06em;
-}
-
-.mp-badge {
-  border-color: color-mix(in srgb, var(--accent) 60%, #cbd5e1 40%);
 }
 
 /* ------------------------------------------------------------------
@@ -688,8 +913,10 @@ canvas {
 
 .memory-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(60px, 1fr));
+  grid-template-columns: repeat(4, minmax(56px, 1fr));
   gap: 0.7rem;
+  width: min(100%, 540px);
+  margin: 0 auto;
 }
 
 .memory-card {
@@ -739,6 +966,7 @@ canvas {
 .quiz-option {
   text-align: left;
   padding: 0.75rem 0.9rem;
+  min-height: 48px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(19, 25, 44, 0.7);
@@ -774,9 +1002,10 @@ canvas {
 
 .ttt-board {
   display: grid;
-  grid-template-columns: repeat(3, minmax(70px, 1fr));
+  grid-template-columns: repeat(3, minmax(64px, 1fr));
   gap: 0.55rem;
-  max-width: 360px;
+  width: min(100%, 360px);
+  margin: 0 auto;
 }
 
 .ttt-cell {
@@ -863,6 +1092,15 @@ canvas {
 .ludo-wrap {
   display: grid;
   gap: 0.8rem;
+  justify-items: center;
+}
+
+/* Ludo draws on a fixed 620px square canvas; scale it to fit any
+ * container while keeping the 1:1 aspect ratio (never clipped). */
+.ludo-wrap canvas {
+  width: min(620px, 100%);
+  height: auto;
+  aspect-ratio: 1;
 }
 
 .ludo-panel {
@@ -893,8 +1131,9 @@ canvas {
 
 .chess-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 520px) minmax(220px, 1fr);
+  grid-template-columns: minmax(0, 520px) minmax(220px, 1fr);
   gap: 1rem;
+  justify-content: center;
 }
 
 .chess-board {
@@ -971,7 +1210,7 @@ canvas {
 
 .g2048-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.45rem;
 }
 
@@ -1008,7 +1247,7 @@ canvas {
 
 .whack-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(72px, 1fr));
+  grid-template-columns: repeat(3, minmax(76px, 1fr));
   gap: 0.6rem;
   width: min(390px, 100%);
 }
@@ -1021,6 +1260,11 @@ canvas {
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  /* Bigger tap targets that never zoom or double-tap. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .whack-hole .mole {
@@ -1044,6 +1288,109 @@ canvas {
   display: grid;
   gap: 0.7rem;
   justify-items: center;
+}
+
+/* ------------------------------------------------------------------
+ * Mobile arcade touch controls
+ * ------------------------------------------------------------------ */
+
+/* Arcade canvases own every gesture: swipes, drags and taps must never
+ * scroll the page, zoom, or trigger navigation / the chat drawer. */
+#game-root canvas {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Snake D-pad: a 3x3 grid with an empty centre. */
+.arcade-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-areas:
+    ". up ."
+    "left center right"
+    ". down .";
+  gap: 0.4rem;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.arcade-dpad-btn {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(19, 25, 44, 0.92);
+  color: var(--accent-glow);
+  font-size: 1.2rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  touch-action: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.arcade-dpad-btn:active {
+  background: color-mix(in srgb, var(--accent) 24%, rgba(19, 25, 44, 0.92));
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line) 40%);
+}
+
+.arcade-dpad-btn[data-dir="up"] { grid-area: up; }
+.arcade-dpad-btn[data-dir="down"] { grid-area: down; }
+.arcade-dpad-btn[data-dir="left"] { grid-area: left; }
+.arcade-dpad-btn[data-dir="right"] { grid-area: right; }
+
+.arcade-dpad::after {
+  content: "";
+  grid-area: center;
+}
+
+/* Breakout: hold-to-move paddle buttons. */
+.arcade-dir-row {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.arcade-dir-btn {
+  flex: 1 1 0;
+  max-width: 120px;
+  min-height: 52px;
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(19, 25, 44, 0.92);
+  color: var(--accent-glow);
+  font-size: 1.3rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.arcade-dir-btn:active {
+  background: color-mix(in srgb, var(--accent) 24%, rgba(19, 25, 44, 0.92));
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line) 40%);
+}
+
+/* Touch controls are for touch-first layouts; desktop keeps the
+ * keyboard / mouse as the primary input. */
+@media (min-width: 1024px) {
+  .arcade-dpad,
+  .arcade-dir-row {
+    display: none;
+  }
 }
 
 /* ------------------------------------------------------------------
@@ -1120,7 +1467,7 @@ canvas {
 .leaderboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 0.9rem;
+  gap: var(--card-gap);
 }
 
 .lb-card {
@@ -1178,8 +1525,8 @@ canvas {
 
 .toast-container {
   position: fixed;
-  right: 1rem;
-  bottom: 1rem;
+  right: calc(1rem + env(safe-area-inset-right, 0px));
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   z-index: 50;
   display: grid;
   gap: 0.5rem;
@@ -1263,47 +1610,77 @@ canvas {
   }
 }
 
-/* ------------------------------------------------------------------
- * Responsive
- * ------------------------------------------------------------------ */
-
-@media (max-width: 1024px) {
-  .games-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
+@keyframes nav-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
   }
-
-  .chess-layout {
-    grid-template-columns: 1fr;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media (max-width: 760px) {
-  .site-header {
-    padding: 0.5rem 1rem;
-    gap: 0.6rem;
-  }
+/* ------------------------------------------------------------------
+ * Responsive
+ * Breakpoints: 1023px (tablets), 767px (phones), 479px (small phones).
+ * Desktop layouts (>= 1024px) are intentionally untouched.
+ * ------------------------------------------------------------------ */
 
-  .brand-title {
-    font-size: 0.95rem;
-  }
-
-  .top-nav {
-    gap: 0.35rem;
-  }
-
-  .top-nav .btn {
-    padding: 0.42rem 0.7rem;
-    font-size: 0.7rem;
+@media (max-width: 1023px) {
+  .chess-layout {
+    grid-template-columns: 1fr;
   }
 
   .hero-panel {
-    padding: 1.5rem 1.3rem;
-    border-radius: 18px;
+    padding: 1.8rem 1.6rem;
+  }
+}
+
+/* Phones (320px - 767px): compact header + menu drawer. */
+@media (max-width: 767px) {
+  html {
+    --page-pad: 1rem;
+    /* Keep content out from under landscape notches. */
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .site-header {
+    padding: 0.5rem 1rem;
+    padding-top: calc(0.5rem + env(safe-area-inset-top, 0px));
+    gap: 0.6rem;
+  }
+
+  /* Compact brand: the short name replaces the full one. */
+  .brand-title {
+    font-size: 0.98rem;
+  }
+
+  .brand-title-desktop {
+    display: none;
+  }
+
+  .brand-title-mobile {
+    display: inline;
+  }
+
+  /* The desktop nav links move into the drawer. */
+  .top-nav {
+    display: none;
+  }
+
+  .nav-menu-btn {
+    display: inline-grid;
+  }
+
+  .hero-panel {
+    padding: 1.4rem 1.15rem;
+    border-radius: 16px;
   }
 
   .hero-panel-sm {
-    padding: 1.2rem 1.1rem;
+    padding: 1.15rem 1rem;
   }
 
   .filter-strip {
@@ -1311,7 +1688,8 @@ canvas {
   }
 
   .filter-btn {
-    padding: 0.44rem 0.85rem;
+    padding: 0.5rem 0.9rem;
+    min-height: 44px;
   }
 
   .section-head {
@@ -1354,9 +1732,46 @@ canvas {
   .game-controls {
     padding: 0 0.8rem 0.9rem;
   }
+
+  /* ---- 44px minimum touch targets ---- */
+  .btn {
+    min-height: 44px;
+  }
+
+  .sfx-mute-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .mp-card-actions .btn,
+  .mp-actions .btn,
+  .game-card-actions .btn {
+    min-height: 44px;
+  }
+
+  .mode-switch button,
+  .ludo-token-btn {
+    min-height: 44px;
+  }
+
+  .memory-card,
+  .ttt-cell,
+  .whack-hole {
+    min-height: 44px;
+  }
+
+  /* Quiz answers stay at the game-specific 48px minimum. */
+  .quiz-option {
+    min-height: 48px;
+  }
+
+  .room-chat-input,
+  .room-chat-send {
+    min-height: 44px;
+  }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 479px) {
   .games-grid {
     grid-template-columns: 1fr;
   }
@@ -1371,6 +1786,6 @@ canvas {
   }
 
   .whack-grid {
-    grid-template-columns: repeat(3, minmax(64px, 1fr));
+    grid-template-columns: repeat(3, minmax(72px, 1fr));
   }
 }

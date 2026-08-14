@@ -71,7 +71,17 @@ function platformConfig() {
 }
 
 function platformName() {
-  return String(platformConfig().name || "Neon Arcade Nexus");
+  return String(platformConfig().name || "Neon Arcade Nexus").trim();
+}
+
+/**
+ * Compact brand used by the mobile header (e.g. "YUDY Game Arcade" -> "YUDY").
+ * Falls back to the full name when it is a single word.
+ */
+function platformShortName() {
+  const full = platformName();
+  const firstWord = String(full).split(/\s+/)[0] || full;
+  return firstWord.length >= 2 ? firstWord : full;
 }
 
 function gameEntries() {
@@ -169,7 +179,8 @@ app.use("/static", express.static(path.join(BASE_DIR, "static")));
 
 app.get("/", (_request, response) => {
   const games = gameEntries();
-  response.render("index", { games, platformName: platformName(), gameCount: games.length });
+  const categoryCount = new Set(games.map((game) => game.category)).size;
+  response.render("index", { games, platformName: platformName(), platformShortName: platformShortName(), gameCount: games.length, categoryCount });
 });
 
 app.get("/game/:gameName", (request, response) => {
@@ -187,12 +198,13 @@ app.get("/game/:gameName", (request, response) => {
     gameScript: GAME_DEFAULTS[gameName].script,
     accent: game.accent,
     platformName: platformName(),
+    platformShortName: platformShortName(),
     gameMultiplayerReady: Boolean(game.multiplayerReady),
     gameStylesheet,
   });
 });
 
-app.get("/leaderboard", (_request, response) => response.render("leaderboard", { platformName: platformName(), games: gameEntries() }));
+app.get("/leaderboard", (_request, response) => response.render("leaderboard", { platformName: platformName(), platformShortName: platformShortName(), games: gameEntries() }));
 
 app.get("/games/:gameName/*filename", (request, response) => {
   const gameName = request.params.gameName.trim().toLowerCase();

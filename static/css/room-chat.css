@@ -16,7 +16,10 @@
   --color-border: #1f2d4d;
   --radius-sm: 8px;
   --radius-md: 14px;
-  --radius-lg: 18px;
+  /* Chat's own radius - deliberately NOT --radius-lg, which is a shared
+   * page token owned by styles.css (16px). Reusing the name here would
+   * silently re-radius every card on pages that load the chat. */
+  --chat-radius-lg: 18px;
   --shadow-card: 0 16px 32px rgba(0, 0, 0, 0.35);
   --chat-accent: var(--accent, #39ff14);
 }
@@ -56,7 +59,7 @@
   min-height: 420px;
   max-height: 70vh;
   border: 1px solid color-mix(in srgb, var(--chat-accent) 45%, var(--color-border) 55%);
-  border-radius: var(--radius-lg);
+  border-radius: var(--chat-radius-lg);
   background: linear-gradient(150deg, rgba(10, 16, 32, 0.96), rgba(16, 24, 44, 0.94));
   box-shadow: var(--shadow-card), 0 0 24px color-mix(in srgb, var(--chat-accent) 16%, transparent);
   overflow: hidden;
@@ -399,9 +402,11 @@
 .room-chat-fab {
   display: none;
   position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 45;
+  right: calc(1rem + env(safe-area-inset-right, 0px));
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  /* Below shared modals (30) and toasts (50): the FAB never floats over
+   * the score/confirm dialogs or new-message notices. */
+  z-index: 29;
   align-items: center;
   gap: 0.45rem;
   border: 1px solid color-mix(in srgb, var(--chat-accent) 70%, #ffffff 30%);
@@ -469,19 +474,24 @@
  * Mobile: bottom-sheet drawer + floating button, game stays the focus.
  * ------------------------------------------------------------------ */
 
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   .room-chat-wrap {
     position: static;
   }
 
   .room-chat {
     position: fixed;
-    left: 0.6rem;
-    right: 0.6rem;
-    bottom: 0.6rem;
-    z-index: 60;
-    max-height: min(78vh, 640px);
-    min-height: 320px;
+    left: max(0.6rem, env(safe-area-inset-left, 0px));
+    right: max(0.6rem, env(safe-area-inset-right, 0px));
+    /* room-chat.js lifts the drawer above the software keyboard. */
+    bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px) + var(--chat-keyboard-inset, 0px));
+    /* Below shared modals (30) and toasts (50) - never covers them. */
+    z-index: 29;
+    /* ~70dvh bottom sheet; room-chat.js caps it to the visible viewport
+     * (keyboard open, browser chrome) via --chat-vv-height. */
+    max-height: min(70vh, 640px);
+    max-height: min(var(--chat-vv-height, 100dvh), 70dvh, 640px);
+    min-height: min(320px, var(--chat-vv-height, 320px));
     box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6), 0 0 26px color-mix(in srgb, var(--chat-accent) 20%, transparent);
     transform: translateY(calc(100% + 1rem));
     opacity: 0;
@@ -515,6 +525,24 @@
   .room-chat-form {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
+
+  /* 16px minimum input font stops iOS Safari from auto-zooming into the
+   * chat field when it is focused. */
+  .room-chat-input {
+    font-size: 16px;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * In-room pages: clear the fixed chat FAB so it never covers important
+ * controls (room actions, Start Game, Play Again, score modal buttons).
+ * ------------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+  body.in-room .home-layout,
+  body.in-room .game-layout {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* ------------------------------------------------------------------
@@ -535,7 +563,7 @@
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 479px) {
   .room-chat-msg {
     max-width: 96%;
   }

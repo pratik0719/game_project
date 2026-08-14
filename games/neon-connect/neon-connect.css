@@ -149,6 +149,23 @@
     gap: 4px;
     padding: 7px;
   }
+
+  /* The two score cards + wins label are wider than a small phone; let
+   * them shrink and wrap instead of overflowing the game area. */
+  .connect-scoreboard {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .connect-score-card {
+    min-width: 0;
+    flex: 1 1 auto;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .connect-score-card span {
+    max-width: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

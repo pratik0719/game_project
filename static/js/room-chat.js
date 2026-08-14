@@ -341,6 +341,11 @@
         clearTimeout(typingStartTimer);
         clearTimeout(closeTimer);
         document.removeEventListener("keydown", handleEscape);
+        window.removeEventListener("resize", syncVisualViewport);
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener("resize", syncVisualViewport);
+          window.visualViewport.removeEventListener("scroll", syncVisualViewport);
+        }
         root.remove();
       },
       open() {
@@ -473,6 +478,31 @@
       }
     }
     document.addEventListener("keydown", handleEscape);
+
+    // ---- mobile keyboard / visual viewport ----------------------------
+    // The mobile drawer is position:fixed, so on Android the software
+    // keyboard would cover the input (iOS resizes the layout viewport
+    // itself). Track the visual viewport and lift the drawer - and cap
+    // its height - to whatever is actually visible on screen.
+
+    function syncVisualViewport() {
+      const vv = window.visualViewport;
+      if (!vv || destroyed) return;
+      const innerHeight = window.innerHeight || 0;
+      // Space the on-screen keyboard occupies at the bottom of the screen.
+      const keyboardInset = Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
+      // Keep the drawer fully inside the visible area (keyboard open,
+      // browser chrome, pinch zoom) by capping its height.
+      const visibleHeight = Math.max(180, Math.round(vv.height - vv.offsetTop - 12));
+      root.style.setProperty("--chat-keyboard-inset", `${keyboardInset}px`);
+      root.style.setProperty("--chat-vv-height", `${visibleHeight}px`);
+    }
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", syncVisualViewport);
+      window.visualViewport.addEventListener("scroll", syncVisualViewport);
+    }
+    window.addEventListener("resize", syncVisualViewport);
+    syncVisualViewport();
 
     // ---- initial state -------------------------------------------------
     // Desktop: panel expanded. Mobile: start closed so the floating button

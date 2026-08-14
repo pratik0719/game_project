@@ -79,8 +79,80 @@
 
   window.ArcadeAPI = ArcadeAPI;
 
+  // ------------------------------------------------------------------
+  // Shared modal confirm (replaces window.confirm - never block the page
+  // with a browser dialog). Returns a Promise<boolean>.
+  // ------------------------------------------------------------------
+
+  let confirmModal = null;
+
+  function createConfirmModal() {
+    const modal = document.createElement("div");
+    modal.className = "modal hidden";
+    modal.setAttribute("aria-hidden", "true");
+    modal.innerHTML = `
+      <div class="modal-card card-surface" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+        <h3 id="confirm-title">Confirm</h3>
+        <p id="confirm-message" class="modal-summary"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-primary" data-confirm-ok>OK</button>
+          <button type="button" class="btn btn-outline" data-confirm-cancel>Cancel</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+  }
+
+  /**
+   * @param {string} message
+   * @param {{ okText?: string, cancelText?: string, danger?: boolean }} [options]
+   * @returns {Promise<boolean>}
+   */
+  function confirmDialog(message, options = {}) {
+    return new Promise((resolve) => {
+      if (!confirmModal) confirmModal = createConfirmModal();
+      const modal = confirmModal;
+      modal.querySelector("#confirm-message").textContent = message;
+      const okBtn = modal.querySelector("[data-confirm-ok]");
+      const cancelBtn = modal.querySelector("[data-confirm-cancel]");
+      okBtn.textContent = options.okText || "OK";
+      cancelBtn.textContent = options.cancelText || "Cancel";
+      okBtn.className = options.danger ? "btn btn-danger" : "btn btn-primary";
+
+      const close = (result) => {
+        modal.classList.add("hidden");
+        modal.setAttribute("aria-hidden", "true");
+        okBtn.removeEventListener("click", onOk);
+        cancelBtn.removeEventListener("click", onCancel);
+        modal.removeEventListener("click", onBackdrop);
+        document.removeEventListener("keydown", onKey);
+        resolve(result);
+      };
+      const onOk = () => close(true);
+      const onCancel = () => close(false);
+      const onBackdrop = (event) => {
+        if (event.target === modal) close(false);
+      };
+      const onKey = (event) => {
+        if (event.key === "Escape") close(false);
+      };
+
+      okBtn.addEventListener("click", onOk);
+      cancelBtn.addEventListener("click", onCancel);
+      modal.addEventListener("click", onBackdrop);
+      document.addEventListener("keydown", onKey);
+      modal.classList.remove("hidden");
+      modal.setAttribute("aria-hidden", "false");
+      cancelBtn.focus();
+    });
+  }
+
+  window.ArcadeUI = { confirm: confirmDialog };
+
   document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.add("page-ready");
+    initNavMenu();
 
     if (PAGE === "home") {
       initHomeFilters();
@@ -90,6 +162,52 @@
       renderLeaderboard();
     }
   });
+
+  // ------------------------------------------------------------------
+  // Mobile header menu (hamburger + drawer).
+  // ------------------------------------------------------------------
+
+  function initNavMenu() {
+    const button = document.getElementById("nav-menu-btn");
+    const drawer = document.getElementById("nav-drawer");
+    if (!button || !drawer) return;
+
+    const setOpen = (open) => {
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+      button.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+      drawer.classList.toggle("open", open);
+      if (open) {
+        const first = drawer.querySelector("a, button");
+        if (first) first.focus({ preventScroll: true });
+      }
+    };
+
+    button.addEventListener("click", () => {
+      setOpen(!drawer.classList.contains("open"));
+    });
+
+    // Any choice inside the drawer closes it (links navigate away anyway).
+    drawer.addEventListener("click", (event) => {
+      if (event.target.closest("a, button")) setOpen(false);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && drawer.classList.contains("open")) setOpen(false);
+    });
+
+    // Clicking outside the drawer closes it.
+    document.addEventListener("click", (event) => {
+      if (!drawer.classList.contains("open")) return;
+      if (event.target === button || button.contains(event.target)) return;
+      if (drawer.contains(event.target)) return;
+      setOpen(false);
+    });
+
+    // Returning to a desktop-width viewport always resets the drawer.
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 767 && drawer.classList.contains("open")) setOpen(false);
+    });
+  }
 
   function showToast(message, type = "info") {
     const container = document.getElementById("toast-container");
@@ -172,7 +290,9 @@
       });
 
       buttons.forEach((button) => {
-        button.classList.toggle("active", button.dataset.filter === filter);
+        const active = button.dataset.filter === filter;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
       });
     };
 

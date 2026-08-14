@@ -139,6 +139,7 @@
     board.forEach((row) => {
       const rowEl = document.createElement("div");
       rowEl.className = "g2048-row";
+      rowEl.style.gridTemplateColumns = `repeat(${row.length}, minmax(0, 1fr))`;
       row.forEach((value) => {
         const tile = document.createElement("div");
         tile.className = "g2048-tile";
@@ -449,6 +450,7 @@
     grid.forEach((row) => {
       const rowEl = document.createElement("div");
       rowEl.className = "g2048-row";
+      rowEl.style.gridTemplateColumns = `repeat(${row.length}, minmax(0, 1fr))`;
       row.forEach((value) => {
         const tile = document.createElement("div");
         tile.className = "g2048-tile";

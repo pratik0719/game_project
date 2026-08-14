@@ -43,6 +43,20 @@
   const ctx = canvas.getContext("2d");
   const scoreEl = document.getElementById("snake-score");
 
+  // ---- High-DPI backing store ----------------------------------------
+  // Game physics stay in the logical canvasWidth/Height space; only the
+  // backing bitmap is re-backed at devicePixelRatio for crisp rendering.
+  let canvasDpr = 1;
+  function applyCanvasDpr() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (dpr === canvasDpr) return;
+    canvasDpr = dpr;
+    canvas.width = Math.round(canvasWidth * dpr);
+    canvas.height = Math.round(canvasHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  applyCanvasDpr();
+
   let snake = [];
   let direction = { x: 1, y: 0 };
   let queuedDirection = { x: 1, y: 0 };
@@ -171,6 +185,7 @@
       resetGame();
       render();
     });
+    mountDPad();
 
     render();
   }
@@ -284,6 +299,18 @@
     render();
   }
 
+  /** Shared direction input (keyboard, D-pad and swipe all land here). */
+  function setDirection(candidate) {
+    if (mpPlaying) {
+      if (mpSupport) mpSupport.sendAction({ type: "direction", direction: candidate });
+      return;
+    }
+    if (candidate.x + direction.x === 0 && candidate.y + direction.y === 0) {
+      return;
+    }
+    queuedDirection = candidate;
+  }
+
   function onKeyDown(event) {
     const key = event.key.toLowerCase();
     const map = {
@@ -302,20 +329,63 @@
     }
 
     event.preventDefault();
-
-    if (mpPlaying) {
-      if (mpSupport) mpSupport.sendAction({ type: "direction", direction: map[key] });
-      return;
-    }
-
-    const candidate = map[key];
-    if (candidate.x + direction.x === 0 && candidate.y + direction.y === 0) {
-      return;
-    }
-    queuedDirection = candidate;
+    setDirection(map[key]);
   }
 
   window.addEventListener("keydown", onKeyDown);
+
+  // ---- Touch controls: swipe the board or tap the D-pad ------------------
+  let swipeStart = null;
+  canvas.addEventListener("pointerdown", (event) => {
+    swipeStart = { x: event.clientX, y: event.clientY };
+  });
+  canvas.addEventListener("pointerup", (event) => {
+    if (!swipeStart) return;
+    const dx = event.clientX - swipeStart.x;
+    const dy = event.clientY - swipeStart.y;
+    swipeStart = null;
+    if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+    if (Math.abs(dx) > Math.abs(dy)) setDirection({ x: dx > 0 ? 1 : -1, y: 0 });
+    else setDirection({ x: 0, y: dy > 0 ? 1 : -1 });
+  });
+
+  const DPAD_MAP = {
+    up: { x: 0, y: -1 },
+    down: { x: 0, y: 1 },
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 },
+  };
+  function buildDPad() {
+    const pad = document.createElement("div");
+    pad.className = "arcade-dpad";
+    pad.setAttribute("role", "group");
+    pad.setAttribute("aria-label", "Directional controls");
+    const cells = [
+      ["up", "▲", "Up"],
+      ["left", "◀", "Left"],
+      ["right", "▶", "Right"],
+      ["down", "▼", "Down"],
+    ];
+    cells.forEach(([dir, glyph, label]) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "arcade-dpad-btn";
+      btn.dataset.dir = dir;
+      btn.setAttribute("aria-label", label);
+      btn.textContent = glyph;
+      btn.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        setDirection(DPAD_MAP[dir]);
+      });
+      pad.appendChild(btn);
+    });
+    return pad;
+  }
+  function mountDPad() {
+    if (controls.querySelector(".arcade-dpad")) return;
+    controls.appendChild(buildDPad());
+  }
+  mountDPad();
 
   // ---------- Multiplayer mode ----------
 
@@ -426,6 +496,7 @@
     controls.appendChild(bar);
     if (mpSupport) mpSupport.renderMatchBar(bar);
     mpSupport?.renderPlayAgainButton(controls, mpPlaying && Boolean(mpResult));
+    mountDPad();
     if (mpPlaying && mpResult) {
       const players = mpSupport ? mpSupport.getPlayers() : [];
       const winnerName = (pn) => {

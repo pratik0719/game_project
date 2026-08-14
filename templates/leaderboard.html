@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title><%= platformName %> | Leaderboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -10,16 +10,29 @@
   <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg" />
   <link rel="stylesheet" href="/static/css/styles.css" />
   <script defer src="/static/js/main.js"></script>
+  <script defer src="/static/js/sfx.js"></script>
 </head>
 <body class="page-leaderboard" data-page="leaderboard" data-games="<%= games.map((game) => game.name).join(',') %>">
   <header class="site-header">
     <a class="brand-wrap" href="/" aria-label="<%= platformName %> home">
       <img class="brand-logo" src="/static/icons/logo.svg" alt="" width="36" height="36" />
-      <span class="brand-title"><%= platformName %></span>
+      <span class="brand-title brand-title-desktop"><%= platformName %></span>
+      <span class="brand-title brand-title-mobile"><%= platformShortName %></span>
     </a>
-    <nav class="top-nav">
+    <nav class="top-nav" aria-label="Site navigation">
       <a class="btn btn-ghost" href="/">Home</a>
+      <button id="sfx-mute" class="sfx-mute-btn" type="button" data-sfx-toggle aria-pressed="false" aria-label="Toggle sound" title="Toggle sound">🔊</button>
     </nav>
+    <button id="nav-menu-btn" class="nav-menu-btn" type="button" aria-expanded="false" aria-controls="nav-drawer" aria-label="Open menu">
+      <span class="nav-menu-icon" aria-hidden="true"></span>
+    </button>
+    <div id="nav-drawer" class="nav-drawer" aria-label="Site menu">
+      <a class="nav-drawer-link" href="/">Home</a>
+      <a class="nav-drawer-link" href="/leaderboard">🏆 Leaderboard</a>
+      <button class="nav-drawer-link" type="button" data-sfx-toggle aria-pressed="false">
+        <span class="nav-sfx-icon" aria-hidden="true">🔊</span> Sound
+      </button>
+    </div>
   </header>
 
   <main class="leaderboard-layout">

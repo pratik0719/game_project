@@ -36,6 +36,21 @@
 
   const canvas = document.getElementById("flappy-canvas");
   const ctx = canvas.getContext("2d");
+
+  // Logical game space stays fixed (physics untouched); only the backing
+  // bitmap is re-backed at devicePixelRatio for crisp mobile rendering.
+  const LOGICAL_W = canvas.width;
+  const LOGICAL_H = canvas.height;
+  let canvasDpr = 1;
+  function applyCanvasDpr() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (dpr === canvasDpr) return;
+    canvasDpr = dpr;
+    canvas.width = Math.round(LOGICAL_W * dpr);
+    canvas.height = Math.round(LOGICAL_H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  applyCanvasDpr();
   const startBtn = document.getElementById("flappy-start");
   const resetBtn = document.getElementById("flappy-reset");
   const scoreEl = document.getElementById("flappy-score");
@@ -126,14 +141,16 @@
     } else if (initialRoom && initialRoom.gameId === MP_GAME) {
       if (initialRoom.status === "playing" && initialRoom.gameState) enterMpMatch();
       else enterMpWaiting();
-    } else {
-      resetState();
-      render();
-    }
   } else {
     resetState();
     render();
+    statusEl.textContent = "Press Start to begin.";
   }
+} else {
+  resetState();
+  render();
+  statusEl.textContent = "Press Start to begin.";
+}
 
 
   startBtn.addEventListener("click", () => {
@@ -152,7 +169,18 @@
     statusEl.textContent = "Reset complete. Press Start.";
   });
 
-  canvas.addEventListener("click", flap);
+  // Tap anywhere on the game area to flap (pointer events cover touch and
+  // mouse and beat the click delay). Tapping also starts a solo round.
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    flap();
+    if (!running && !mpPlaying) {
+      running = true;
+      started = true;
+      statusEl.textContent = "Tap canvas or press Space to flap.";
+      loop();
+    }
+  });
   window.addEventListener("keydown", (event) => {
     if (event.code === "Space") {
       event.preventDefault();
@@ -160,6 +188,7 @@
       if (!running && !mpPlaying) {
         running = true;
         started = true;
+        statusEl.textContent = "Tap canvas or press Space to flap.";
         loop();
       }
     }
@@ -168,7 +197,7 @@
   function resetState() {
     bird = {
       x: 110,
-      y: canvas.height / 2,
+      y: LOGICAL_H / 2,
       vy: 0,
       radius: 14,
     };
@@ -215,10 +244,10 @@
 
     if (frames % spawnInterval === 0) {
       const minY = 90;
-      const maxY = canvas.height - 90;
+      const maxY = LOGICAL_H - 90;
       const gapY = minY + Math.random() * (maxY - minY);
       pipes.push({
-        x: canvas.width + 20,
+        x: LOGICAL_W + 20,
         gapY,
         passed: false,
       });
@@ -236,7 +265,7 @@
 
     pipes = pipes.filter((pipe) => pipe.x + pipeWidth > -30);
 
-    if (bird.y - bird.radius < 0 || bird.y + bird.radius > canvas.height) {
+    if (bird.y - bird.radius < 0 || bird.y + bird.radius > LOGICAL_H) {
       onGameOver();
       return;
     }
@@ -275,18 +304,18 @@
   }
 
   function render() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
 
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, LOGICAL_H);
     gradient.addColorStop(0, "#0d2446");
     gradient.addColorStop(1, "#081222");
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
 
     pipes.forEach((pipe) => {
       ctx.fillStyle = "#34d399";
       ctx.fillRect(pipe.x, 0, pipeWidth, pipe.gapY - pipeGap / 2);
-      ctx.fillRect(pipe.x, pipe.gapY + pipeGap / 2, pipeWidth, canvas.height - (pipe.gapY + pipeGap / 2));
+      ctx.fillRect(pipe.x, pipe.gapY + pipeGap / 2, pipeWidth, LOGICAL_H - (pipe.gapY + pipeGap / 2));
     });
 
     ctx.beginPath();
@@ -334,13 +363,13 @@
   }
 
   function renderMpWaitingCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
     ctx.fillStyle = "#0d2446";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
     ctx.fillStyle = "rgba(144, 166, 195, 0.6)";
     ctx.font = "16px Orbitron";
     ctx.textAlign = "center";
-    ctx.fillText("Waiting for the host...", canvas.width / 2, canvas.height / 2);
+    ctx.fillText("Waiting for the host...", LOGICAL_W / 2, LOGICAL_H / 2);
     ctx.textAlign = "start";
   }
 
@@ -348,17 +377,17 @@
     const state = mpSupport ? mpSupport.getGameState() : null;
     if (!state) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
+    const gradient = ctx.createLinearGradient(0, 0, 0, LOGICAL_H);
     gradient.addColorStop(0, "#0d2446");
     gradient.addColorStop(1, "#081222");
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
 
     (state.pipes || []).forEach((pipe) => {
       ctx.fillStyle = "#34d399";
       ctx.fillRect(pipe.x, 0, pipeWidth, pipe.gapY - pipeGap / 2);
-      ctx.fillRect(pipe.x, pipe.gapY + pipeGap / 2, pipeWidth, canvas.height - (pipe.gapY + pipeGap / 2));
+      ctx.fillRect(pipe.x, pipe.gapY + pipeGap / 2, pipeWidth, LOGICAL_H - (pipe.gapY + pipeGap / 2));
     });
 
     const myNumber = mpSupport ? mpSupport.myPlayerNumber() : null;
@@ -423,5 +452,6 @@
     if (again) again.remove();
     resetState();
     render();
+    statusEl.textContent = "Press Start to begin.";
   }
 })();

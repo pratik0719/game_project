@@ -102,6 +102,9 @@
     lastDrop = state.lastDrop || null;
     gameActive = !winner && !draw;
     render();
+    // Rebuild the match bar on every state so the turn highlight tracks
+    // the server's currentTurn (same pattern as every other game).
+    renderControls();
   }
 
   function mpOpponentName() {
@@ -399,6 +402,15 @@
     mpPlaying = true;
     mpResult = null;
     myRole = mpSupport.myRole;
+    // Render a blank board until the server's first game_state arrives -
+    // render() reads board[row][col], so it needs a real grid to draw.
+    board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+    winner = null;
+    draw = false;
+    winningCells = [];
+    lastDrop = null;
+    currentTurnRole = "cyan";
+    gameActive = true;
     statusEl.textContent = "Connect four before your opponent!";
     render();
     renderControls();
@@ -415,9 +427,10 @@
     if (mpSupport) mpSupport.sendAction({ type: "drop_disc", column });
   }
 
-  function sendSurrender() {
+  async function sendSurrender() {
     if (!mpPlaying || mpResult) return;
-    if (!window.confirm("Surrender the match?")) return;
+    const ok = window.ArcadeUI ? await window.ArcadeUI.confirm("Surrender the match?", { okText: "Surrender", danger: true }) : true;
+    if (!ok) return;
     if (mpSupport) mpSupport.sendAction({ type: "surrender" });
   }
 

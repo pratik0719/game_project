@@ -107,15 +107,18 @@
 .rps-choice {
   display: grid;
   justify-items: center;
+  align-content: center;
   gap: 0.4rem;
   min-width: 110px;
-  padding: 1.1rem 0.9rem;
+  min-height: 48px;
+  padding: 0.9rem;
   border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line) 45%);
   border-radius: 16px;
   background: rgba(8, 13, 26, 0.8);
   color: var(--text-main);
   font-family: "Orbitron", sans-serif;
   cursor: pointer;
+  touch-action: manipulation;
   transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 

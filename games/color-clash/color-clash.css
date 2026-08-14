@@ -319,17 +319,53 @@
 }
 
 /* ---- Mobile ---- */
-@media (max-width: 640px) {
+@media (max-width: 767px) {
+  /* Opponents stay compact: small chips that wrap instead of squeezing. */
+  .clash-opponents {
+    gap: 0.45rem;
+  }
+
+  .clash-opponent {
+    gap: 0.4rem;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .clash-avatar {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.75rem;
+  }
+
+  .clash-opp-name {
+    font-size: 0.8rem;
+  }
+
+  /* Piles stay centered between the opponent rows and the hand. */
   .clash-center {
     gap: 1rem;
   }
+
+  .clash-pile .clash-card,
+  .clash-card-back {
+    width: 2.9rem;
+    height: 4.3rem;
+  }
+
+  /* The hand is a horizontally scrollable strip (never wraps). */
   .clash-hand {
     justify-content: flex-start;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    margin-inline: -0.4rem;
+    padding-inline: 0.4rem;
   }
+
   .clash-hand .clash-card {
+    scroll-snap-align: start;
     width: 3rem;
     height: 4.5rem;
   }
+
   .clash-card-main {
     font-size: 1.2rem;
   }
